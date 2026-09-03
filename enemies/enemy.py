@@ -97,6 +97,18 @@ class Enemy:
             return True  # just died
         return False
 
+    def knockback(self, angle: float, distance: float = 70.0):
+        """Push the enemy away from the player's flame direction."""
+        dx = math.cos(angle) * distance
+        dy = math.sin(angle) * distance
+
+        self.rect.x += int(dx)
+        self.rect.y += int(dy)
+
+        # Stop any old velocity so the enemy does not immediately
+        # continue moving in the previous direction.
+        self.vel.update(0, 0)
+
     def can_attack(self) -> bool:
         return self._attack_cd <= 0
 

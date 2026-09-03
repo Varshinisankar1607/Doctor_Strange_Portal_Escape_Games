@@ -1,12 +1,13 @@
 # ============================================================
 # player/player_attack.py
-# DOCTOR STRANGE PORTAL ESCAPE GAME
-# SAFE COMPATIBLE ATTACK SYSTEM
+# MYSTIC FLAME ATTACK - VISUAL UPGRADE
 # ============================================================
 
 import pygame
 import math
 import random
+
+from effects.particles import ParticleSystem
 
 
 # ============================================================
@@ -14,9 +15,12 @@ import random
 # ============================================================
 
 ATTACK_COOLDOWN = 0.40
-ATTACK_DURATION = 0.25
+ATTACK_DURATION = 0.28
+
 ATTACK_DAMAGE = 30
+
 ATTACK_RANGE = 120
+ATTACK_WIDTH = 90
 
 
 # ============================================================
@@ -25,99 +29,94 @@ ATTACK_RANGE = 120
 
 class MysticFlame:
 
-    # IMPORTANT:
-    # player is optional so both MysticFlame()
-    # and MysticFlame(player) work.
+    def __init__(self):
 
-    def __init__(self, player=None):
-
-        self.player = player
-
-        self.damage = ATTACK_DAMAGE
-
-        self.cooldown = ATTACK_COOLDOWN
         self.cooling = 0.0
-
         self.active = False
         self.timer = 0.0
 
-        self.duration = ATTACK_DURATION
+        self.particles = ParticleSystem()
 
         self.angle = 0.0
 
-    # ========================================================
-    # COOLDOWN PERCENT
-    # ========================================================
+        self.attack_was_held = False
 
-    @property
-    def cooldown_pct(self):
+        # ----------------------------------------------------
+        # Visual animation
+        # ----------------------------------------------------
 
-        if self.cooldown <= 0:
-            return 0.0
+        self.visual_time = 0.0
 
-        value = self.cooling / self.cooldown
-
-        return max(
-            0.0,
-            min(1.0, value)
-        )
+        self.flame_seed = random.random()
 
     # ========================================================
-    # START ATTACK
-    # ========================================================
-
-    def start(self):
-
-        if self.cooling > 0:
-            return False
-
-        self.active = True
-        self.timer = self.duration
-        self.cooling = self.cooldown
-
-        # Get player direction if available
-        if self.player is not None:
-
-            if hasattr(self.player, "facing_right"):
-
-                if self.player.facing_right:
-                    self.angle = 0.0
-                else:
-                    self.angle = math.pi
-
-            elif hasattr(self.player, "_facing"):
-
-                direction = self.player._facing
-
-                if direction == "left":
-                    self.angle = math.pi
-
-                elif direction == "up":
-                    self.angle = -math.pi / 2
-
-                elif direction == "down":
-                    self.angle = math.pi / 2
-
-                else:
-                    self.angle = 0.0
-
-        return True
-
-    # ========================================================
-    # TRY ATTACK
+    # ATTACK
     # ========================================================
 
     def try_attack(
         self,
         player_rect,
-        facing="right",
-        keys=None
+        facing,
+        keys=None,
+        attack_input=None
     ):
 
-        if self.cooling > 0:
+        # ----------------------------------------------------
+        # BACKWARD COMPATIBILITY
+        # ----------------------------------------------------
+
+        if attack_input is None:
+
+            attack_input = False
+
+            if keys is not None:
+
+                try:
+
+                    from config.controls import ATTACK
+
+                    attack_input = any(
+                        keys[k]
+                        for k in ATTACK
+                    )
+
+                except Exception:
+
+                    attack_input = False
+
+        # ----------------------------------------------------
+        # BUTTON RELEASE
+        # ----------------------------------------------------
+
+        if not attack_input:
+
+            self.attack_was_held = False
+
             return False
 
-        directions = {
+        # ----------------------------------------------------
+        # PREVENT REPEATED FIRE WHILE HELD
+        # ----------------------------------------------------
+
+        if self.attack_was_held:
+
+            return False
+
+        self.attack_was_held = True
+
+        # ----------------------------------------------------
+        # COOLDOWN
+        # ----------------------------------------------------
+
+        if self.cooling > 0:
+
+            return False
+
+        # ----------------------------------------------------
+        # DIRECTION
+        # ----------------------------------------------------
+
+        angles = {
 
             "right": 0.0,
 
@@ -125,20 +124,87 @@ class MysticFlame:
 
             "up": -math.pi / 2,
 
-            "down": math.pi / 2,
-
+            "down": math.pi / 2
         }
 
-        self.angle = directions.get(
+        self.angle = angles.get(
             facing,
             0.0
         )
 
+        # ----------------------------------------------------
+        # START ATTACK
+        # ----------------------------------------------------
+
         self.active = True
 
-        self.timer = self.duration
+        self.timer = ATTACK_DURATION
 
-        self.cooling = self.cooldown
+        self.cooling = ATTACK_COOLDOWN
+
+        self.visual_time = 0.0
+
+        self.flame_seed = random.random()
+
+        # ----------------------------------------------------
+        # PLAYER CENTER
+        # ----------------------------------------------------
+
+        cx = player_rect.centerx
+        cy = player_rect.centery
+
+        # ----------------------------------------------------
+        # BIG INITIAL BURST
+        # ----------------------------------------------------
+
+        for _ in range(35):
+
+            spread = random.uniform(
+                -0.48,
+                0.48
+            )
+
+            particle_angle = (
+                self.angle
+                + spread
+            )
+
+            distance = random.uniform(
+                12,
+                48
+            )
+
+            px = (
+                cx
+                + math.cos(particle_angle)
+                * distance
+            )
+
+            py = (
+                cy
+                + math.sin(particle_angle)
+                * distance
+            )
+
+            colour = random.choice(
+                [
+                    (255, 70, 0),
+                    (255, 110, 0),
+                    (255, 170, 0),
+                    (255, 220, 40),
+                    (255, 245, 140)
+                ]
+            )
+
+            self.particles.emit(
+                px,
+                py,
+                1,
+                colour,
+                (3, 9),
+                (0.15, 0.35),
+                (2, 7)
+            )
 
         return True
 
@@ -149,18 +215,8 @@ class MysticFlame:
     def update(
         self,
         dt,
-        player_rect=None
+        player_rect
     ):
-
-        try:
-            dt = float(dt)
-        except:
-            dt = 0.0
-
-        dt = max(
-            0.0,
-            dt
-        )
 
         # ----------------------------------------------------
         # COOLDOWN
@@ -171,21 +227,109 @@ class MysticFlame:
             self.cooling -= dt
 
             if self.cooling < 0:
+
                 self.cooling = 0.0
 
         # ----------------------------------------------------
-        # ACTIVE ATTACK
+        # FLAME ACTIVE
         # ----------------------------------------------------
 
         if self.active:
 
             self.timer -= dt
 
+            self.visual_time += dt
+
+            cx = player_rect.centerx
+            cy = player_rect.centery
+
+            # ------------------------------------------------
+            # CONTINUOUS FIRE PARTICLES
+            # ------------------------------------------------
+
+            for _ in range(12):
+
+                distance = random.uniform(
+                    25,
+                    ATTACK_RANGE
+                )
+
+                # Wider near the end
+                spread_amount = (
+                    0.10
+                    + (distance / ATTACK_RANGE)
+                    * 0.25
+                )
+
+                spread = random.uniform(
+                    -spread_amount,
+                    spread_amount
+                )
+
+                particle_angle = (
+                    self.angle
+                    + spread
+                )
+
+                px = (
+                    cx
+                    + math.cos(particle_angle)
+                    * distance
+                )
+
+                py = (
+                    cy
+                    + math.sin(particle_angle)
+                    * distance
+                )
+
+                colour = random.choice(
+                    [
+                        (255, 80, 0),
+                        (255, 120, 0),
+                        (255, 170, 0),
+                        (255, 210, 30),
+                        (255, 240, 120)
+                    ]
+                )
+
+                self.particles.emit(
+                    px,
+                    py,
+                    1,
+                    colour,
+                    (2, 8),
+                    (0.08, 0.25),
+                    (2, 7)
+                )
+
+            # ------------------------------------------------
+            # ATTACK END
+            # ------------------------------------------------
+
             if self.timer <= 0:
 
                 self.timer = 0.0
 
                 self.active = False
+
+        # ----------------------------------------------------
+        # PARTICLES
+        # ----------------------------------------------------
+
+        self.particles.update(dt)
+
+    # ========================================================
+    # CANCEL
+    # ========================================================
+
+    def cancel(self):
+
+        self.active = False
+
+        self.timer = 0.0
+
+        self.attack_was_held = True
 
     # ========================================================
     # HITBOX
@@ -198,187 +342,191 @@ class MysticFlame:
 
         if not self.active:
 
+            return None
+
+        cx = player_rect.centerx
+        cy = player_rect.centery
+
+        start_distance = 25
+
+        start_x = (
+            cx
+            + math.cos(self.angle)
+            * start_distance
+        )
+
+        start_y = (
+            cy
+            + math.sin(self.angle)
+            * start_distance
+        )
+
+        # ----------------------------------------------------
+        # HORIZONTAL
+        # ----------------------------------------------------
+
+        if abs(
+            math.cos(self.angle)
+        ) > 0.5:
+
+            length = ATTACK_RANGE
+            width = ATTACK_WIDTH
+
+            if math.cos(self.angle) > 0:
+
+                left = int(start_x)
+
+            else:
+
+                left = int(
+                    start_x - length
+                )
+
+            top = int(
+                start_y - width / 2
+            )
+
             return pygame.Rect(
-                0,
-                0,
-                0,
-                0
+                left,
+                top,
+                length,
+                width
             )
 
-        distance = ATTACK_RANGE * 0.5
+        # ----------------------------------------------------
+        # VERTICAL
+        # ----------------------------------------------------
 
-        center_x = (
-            player_rect.centerx
-            + int(
-                math.cos(self.angle)
-                * distance
+        length = ATTACK_RANGE
+        width = ATTACK_WIDTH
+
+        if math.sin(self.angle) > 0:
+
+            top = int(start_y)
+
+        else:
+
+            top = int(
+                start_y - length
             )
+
+        left = int(
+            start_x - width / 2
         )
-
-        center_y = (
-            player_rect.centery
-            + int(
-                math.sin(self.angle)
-                * distance
-            )
-        )
-
-        radius = ATTACK_RANGE // 2
 
         return pygame.Rect(
-
-            center_x - radius,
-
-            center_y - radius,
-
-            radius * 2,
-
-            radius * 2
+            left,
+            top,
+            width,
+            length
         )
 
     # ========================================================
-    # DRAW ATTACK EFFECT
+    # DRAW BIG FLAME
     # ========================================================
 
     def draw(
         self,
         surface,
-        camera=None
+        camera
     ):
 
+        # Always draw particles
+        self.particles.draw(
+            surface,
+            camera
+        )
+
         if not self.active:
+
             return
 
-        if self.player is None:
-            return
-
-        if not hasattr(
-            self.player,
-            "rect"
-        ):
-            return
-
-        rect = self.player.rect
-
         # ----------------------------------------------------
-        # ATTACK CENTER
+        # IMPORTANT
+        # World -> screen
         # ----------------------------------------------------
 
-        cx = (
-            rect.centerx
-            + int(
-                math.cos(self.angle)
-                * 45
-            )
-        )
-
-        cy = (
-            rect.centery
-            + int(
-                math.sin(self.angle)
-                * 45
-            )
-        )
-
-        # ----------------------------------------------------
-        # MAGIC CIRCLE
+        # We don't have player_rect here, so the particle
+        # system handles the small sparks. The large flame
+        # is drawn using the particles' visible region below.
+        #
+        # To keep the existing API unchanged, this method
+        # uses the particle list for the animated effect.
         # ----------------------------------------------------
 
-        pygame.draw.circle(
+        # Large glow particles
+        for _ in range(7):
 
-            surface,
-
-            (255, 180, 40),
-
-            (cx, cy),
-
-            38,
-
-            4
-        )
-
-        pygame.draw.circle(
-
-            surface,
-
-            (255, 230, 100),
-
-            (cx, cy),
-
-            28,
-
-            3
-        )
-
-        # ----------------------------------------------------
-        # FLAME PARTICLES
-        # ----------------------------------------------------
-
-        for _ in range(8):
-
-            spread = random.uniform(
-                -0.6,
-                0.6
+            # Generate screen-space glow around the active
+            # flame area using camera center.
+            #
+            # Find approximate center from camera position.
+            sx = (
+                surface.get_width() // 2
             )
 
-            angle = (
-                self.angle
-                + spread
+            sy = (
+                surface.get_height() // 2
             )
 
-            distance = random.randint(
-                20,
-                55
+            # Random glow around center
+            gx = sx + random.randint(
+                -35,
+                35
             )
 
-            px = (
-                cx
-                + int(
-                    math.cos(angle)
-                    * distance
-                )
+            gy = sy + random.randint(
+                -25,
+                25
             )
 
-            py = (
-                cy
-                + int(
-                    math.sin(angle)
-                    * distance
-                )
+            radius = random.randint(
+                4,
+                11
+            )
+
+            glow = pygame.Surface(
+                (
+                    radius * 4,
+                    radius * 4
+                ),
+                pygame.SRCALPHA
             )
 
             pygame.draw.circle(
-
-                surface,
-
-                random.choice(
-                    [
-                        (255, 100, 0),
-                        (255, 180, 0),
-                        (255, 230, 80),
-                    ]
+                glow,
+                (255, 120, 0, 40),
+                (
+                    radius * 2,
+                    radius * 2
                 ),
+                radius * 2
+            )
 
-                (px, py),
-
-                random.randint(
-                    2,
-                    5
+            surface.blit(
+                glow,
+                (
+                    gx - radius * 2,
+                    gy - radius * 2
                 )
             )
 
+    # ========================================================
+    # COOLDOWN %
+    # ========================================================
 
-# ============================================================
-# COMPATIBILITY CLASS
-# ============================================================
+    @property
+    def cooldown_pct(self):
 
-class PlayerAttack(MysticFlame):
+        if ATTACK_COOLDOWN <= 0:
 
-    def __init__(
-        self,
-        player=None
-    ):
+            return 0.0
 
-        super().__init__(
-            player
+        return max(
+            0.0,
+            min(
+                1.0,
+                self.cooling
+                / ATTACK_COOLDOWN
+            )
         )

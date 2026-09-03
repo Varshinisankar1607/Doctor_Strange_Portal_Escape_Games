@@ -3,8 +3,6 @@
 """Stage 1 — New York City."""
 
 import pygame
-import math
-import random
 
 from levels.base_level import BaseLevel
 from config.stages import STAGE_CONFIG
@@ -47,6 +45,7 @@ class Stage1NewYork(BaseLevel):
 
         self.walls = [
 
+            # Top boundary
             pygame.Rect(
                 0,
                 0,
@@ -54,6 +53,7 @@ class Stage1NewYork(BaseLevel):
                 40
             ),
 
+            # Bottom boundary
             pygame.Rect(
                 0,
                 wh - 40,
@@ -61,6 +61,7 @@ class Stage1NewYork(BaseLevel):
                 40
             ),
 
+            # Left boundary
             pygame.Rect(
                 0,
                 0,
@@ -68,6 +69,7 @@ class Stage1NewYork(BaseLevel):
                 wh
             ),
 
+            # Right boundary
             pygame.Rect(
                 ww - 40,
                 0,
@@ -77,56 +79,90 @@ class Stage1NewYork(BaseLevel):
         ]
 
         # -----------------------------------------------------------
-        # NYC BUILDING / STREET BLOCKS
+        # NYC PLATFORM OBSTACLES
+        #
+        # Thin horizontal platforms like Stage 2.
+        #
+        # IMPORTANT:
+        # These are actual collision rectangles, so the player
+        # will collide with these platforms normally.
         # -----------------------------------------------------------
 
-        blocks = [
+        platforms = [
 
-            (80, 80, 260, 200),
+            # =======================================================
+            # TOP SECTION
+            # =======================================================
 
-            (400, 80, 260, 200),
+            # Left upper platform
+            (80, 180, 270, 42),
 
-            (720, 80, 260, 200),
+            # Middle upper platform
+            (430, 180, 260, 42),
 
-            (1040, 80, 260, 200),
+            # Right upper platform
+            (780, 180, 250, 42),
 
-            (1380, 80, 260, 200),
+            # Far right upper platform
+            (1110, 180, 250, 42),
 
-            (1640, 80, 220, 200),
+            # =======================================================
+            # MIDDLE SECTION
+            # =======================================================
 
-            (80, 380, 240, 200),
+            # Left-middle platform
+            (180, 360, 250, 42),
 
-            (400, 380, 240, 200),
+            # Center platform
+            (540, 360, 290, 42),
 
-            (720, 380, 240, 200),
+            # Right-middle platform
+            (940, 360, 300, 42),
 
-            (1040, 380, 240, 200),
+            # Far-right platform
+            (1350, 360, 250, 42),
 
-            (1380, 380, 220, 200),
+            # =======================================================
+            # LOWER SECTION
+            # =======================================================
 
-            (1640, 380, 220, 200),
+            # Left lower platform
+            (80, 550, 250, 42),
 
-            (80, 700, 220, 280),
+            # Center-left lower platform
+            (400, 550, 260, 42),
 
-            (380, 700, 220, 280),
+            # Center-right lower platform
+            (760, 550, 280, 42),
 
-            (700, 700, 220, 280),
+            # Right lower platform
+            (1120, 550, 300, 42),
 
-            (1040, 700, 220, 280),
+            # =======================================================
+            # BOTTOM PLATFORM ROW
+            # =======================================================
 
-            (1380, 700, 220, 280),
+            (180, 700, 280, 42),
 
-            (1640, 700, 220, 280),
+            (570, 700, 250, 42),
+
+            (900, 700, 280, 42),
+
+            (1280, 700, 300, 42),
         ]
 
-        for bx, by, bw, bh in blocks:
+        # -----------------------------------------------------------
+        # CREATE COLLISION RECTANGLES
+        # -----------------------------------------------------------
+
+        for px, py, pw, ph in platforms:
 
             self.walls.append(
                 pygame.Rect(
-                    bx,
-                    by,
-                    bw,
-                    bh
+                    px,
+                    py,
+                    pw,
+                    ph
                 )
             )
 
@@ -134,7 +170,9 @@ class Stage1NewYork(BaseLevel):
         # PORTALS
         # -----------------------------------------------------------
 
-        self.generate_portals(ps)
+        self.generate_portals(
+            ps
+        )
 
         # -----------------------------------------------------------
         # FRAGMENTS
@@ -153,7 +191,6 @@ class Stage1NewYork(BaseLevel):
         surface: pygame.Surface
     ):
 
-        # Draw the new NYC background
         surface.blit(
             self.bg_image,
             (0, 0)

@@ -89,57 +89,217 @@ class Portal:
         portal_surf = pygame.Surface((outer_r*2+10, int(outer_r*2*0.65)+10), pygame.SRCALPHA)
         ps_cx = outer_r + 5
         ps_cy = int(outer_r * 0.65) + 5
+
         # Dark interior
-        pygame.draw.ellipse(portal_surf, (10, 5, 30, 220),
-                            (5, 5, outer_r*2, int(outer_r*1.3)))
+        pygame.draw.ellipse(
+            portal_surf,
+            (10, 5, 30, 220),
+            (5, 5, outer_r*2, int(outer_r*1.3))
+        )
+
         # Interior shimmer
-        shimmer = (min(255, col[0]//2), min(255, col[1]//2), min(255, col[2]//2))
-        pygame.draw.ellipse(portal_surf, (*shimmer, 80),
-                            (15, 15, outer_r*2-20, int(outer_r*1.3)-20))
-        surface.blit(portal_surf, (cx-outer_r-5, cy-int(outer_r*0.65)-5))
+        shimmer = (
+            min(255, col[0]//2),
+            min(255, col[1]//2),
+            min(255, col[2]//2)
+        )
+
+        pygame.draw.ellipse(
+            portal_surf,
+            (*shimmer, 80),
+            (15, 15, outer_r*2-20, int(outer_r*1.3)-20)
+        )
+
+        surface.blit(
+            portal_surf,
+            (
+                cx-outer_r-5,
+                cy-int(outer_r*0.65)-5
+            )
+        )
 
         # --- Rotating rings ---
         for ring_idx in range(3):
-            angle_off = self._angle + ring_idx * 40
-            ring_r = outer_r - ring_idx * 6
-            ring_a = 200 - ring_idx * 50
-            ring_surf = pygame.Surface((ring_r*2+4, ring_r*2+4), pygame.SRCALPHA)
-            pygame.draw.ellipse(ring_surf, (*col, ring_a),
-                                (2, 2, ring_r*2, ring_r*2), 3)
-            # Rotate by drawing arc-ish rotated points
-            rotated = pygame.transform.rotate(ring_surf, angle_off)
+
+            angle_off = (
+                self._angle
+                + ring_idx * 40
+            )
+
+            ring_r = (
+                outer_r
+                - ring_idx * 6
+            )
+
+            ring_a = (
+                200
+                - ring_idx * 50
+            )
+
+            ring_surf = pygame.Surface(
+                (
+                    ring_r*2+4,
+                    ring_r*2+4
+                ),
+                pygame.SRCALPHA
+            )
+
+            pygame.draw.ellipse(
+                ring_surf,
+                (*col, ring_a),
+                (
+                    2,
+                    2,
+                    ring_r*2,
+                    ring_r*2
+                ),
+                3
+            )
+
+            rotated = pygame.transform.rotate(
+                ring_surf,
+                angle_off
+            )
+
             rw, rh = rotated.get_size()
-            surface.blit(rotated, (cx-rw//2, cy-rh//2),
-                         special_flags=pygame.BLEND_RGBA_ADD)
+
+            surface.blit(
+                rotated,
+                (
+                    cx-rw//2,
+                    cy-rh//2
+                ),
+                special_flags=pygame.BLEND_RGBA_ADD
+            )
 
         # --- Outer solid ring frame ---
-        pygame.draw.ellipse(surface, col,
-                            (cx-outer_r, int(cy-outer_r*0.65), outer_r*2, int(outer_r*1.3)), 4)
+        pygame.draw.ellipse(
+            surface,
+            col,
+            (
+                cx-outer_r,
+                int(cy-outer_r*0.65),
+                outer_r*2,
+                int(outer_r*1.3)
+            ),
+            4
+        )
+
         # Inner ring
-        pygame.draw.ellipse(surface, (255, 255, 200),
-                            (cx-inner_r, int(cy-inner_r*0.65), inner_r*2, int(inner_r*1.3)), 2)
+        pygame.draw.ellipse(
+            surface,
+            (255, 255, 200),
+            (
+                cx-inner_r,
+                int(cy-inner_r*0.65),
+                inner_r*2,
+                int(inner_r*1.3)
+            ),
+            2
+        )
 
         # --- Particles ---
         for p in self._particles:
-            sx = int(p[0]) - int(camera.offset_x)
-            sy = int(p[1]) - int(camera.offset_y)
-            alpha = int(255 * (p[4] / p[5]))
-            ps = pygame.Surface((6,6), pygame.SRCALPHA)
-            pygame.draw.circle(ps, (*col, alpha), (3,3), 3)
-            surface.blit(ps, (sx-3, sy-3), special_flags=pygame.BLEND_RGBA_ADD)
+
+            sx = (
+                int(p[0])
+                - int(camera.offset_x)
+            )
+
+            sy = (
+                int(p[1])
+                - int(camera.offset_y)
+            )
+
+            alpha = int(
+                255 * (p[4] / p[5])
+            )
+
+            ps = pygame.Surface(
+                (6, 6),
+                pygame.SRCALPHA
+            )
+
+            pygame.draw.circle(
+                ps,
+                (*col, alpha),
+                (3, 3),
+                3
+            )
+
+            surface.blit(
+                ps,
+                (sx-3, sy-3),
+                special_flags=pygame.BLEND_RGBA_ADD
+            )
 
         # --- Label ---
         if self.label and font:
-            txt = font.render(self.label, True, (255, 220, 120))
-            surface.blit(txt, (cx - txt.get_width()//2, cy + outer_r + 5))
 
-    def draw_interact_prompt(self, surface, camera, font):
+            txt = font.render(
+                self.label,
+                True,
+                (255, 220, 120)
+            )
+
+            surface.blit(
+                txt,
+                (
+                    cx - txt.get_width()//2,
+                    cy + outer_r + 5
+                )
+            )
+
+    def draw_interact_prompt(
+        self,
+        surface,
+        camera,
+        font
+    ):
+
         if not font:
             return
-        cx = self.rect.centerx - int(camera.offset_x)
-        cy = self.rect.centery - int(camera.offset_y)
-        txt = font.render("[E] ENTER PORTAL", True, (255, 220, 80))
-        bg  = pygame.Surface((txt.get_width()+16, txt.get_height()+8), pygame.SRCALPHA)
-        bg.fill((0,0,0,150))
-        surface.blit(bg, (cx-bg.get_width()//2, cy-80))
-        surface.blit(txt, (cx-txt.get_width()//2, cy-76))
+
+        cx = (
+            self.rect.centerx
+            - int(camera.offset_x)
+        )
+
+        cy = (
+            self.rect.centery
+            - int(camera.offset_y)
+        )
+
+        txt = font.render(
+            "[E] ENTER PORTAL",
+            True,
+            (255, 220, 80)
+        )
+
+        bg = pygame.Surface(
+            (
+                txt.get_width()+16,
+                txt.get_height()+8
+            ),
+            pygame.SRCALPHA
+        )
+
+        bg.fill(
+            (0, 0, 0, 150)
+        )
+
+        surface.blit(
+            bg,
+            (
+                cx-bg.get_width()//2,
+                cy-80
+            )
+        )
+
+        surface.blit(
+            txt,
+            (
+                cx-txt.get_width()//2,
+                cy-76
+            )
+        )
