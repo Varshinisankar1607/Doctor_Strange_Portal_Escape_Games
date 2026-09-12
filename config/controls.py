@@ -56,7 +56,7 @@ CONFIRM = [
 # CONTROLLER BUTTONS
 # ============================================================
 
-# Standard Xbox / PlayStation SDL layout
+# SDL / Xbox-style layout
 #
 # 0 = A / Cross
 # 1 = B / Circle
@@ -64,17 +64,32 @@ CONFIRM = [
 # 3 = Y / Triangle
 # 7 = Start
 #
-# Movement = Left Stick
+# Current project mappings are preserved here.
+# The combat-spec buttons will be added in later steps.
 
 CONTROLLER_INTERACT = 0
 CONTROLLER_DODGE = 1
 CONTROLLER_ATTACK = 2
 CONTROLLER_PAUSE = 7
 
+# Left stick
 CONTROLLER_AXIS_X = 0
 CONTROLLER_AXIS_Y = 1
 
-CONTROLLER_DEADZONE = 0.20
+
+# ============================================================
+# CONTROLLER MOVEMENT TUNING
+# ============================================================
+
+# Controller-first spec:
+#
+# Radial deadzone: 0.18
+# Outer deadzone : 0.95
+# Response curve : magnitude ^ 1.5
+
+CONTROLLER_DEADZONE = 0.18
+CONTROLLER_OUTER_DEADZONE = 0.95
+CONTROLLER_RESPONSE_CURVE = 1.5
 
 
 # ============================================================
@@ -88,11 +103,13 @@ class InputManager:
         self.joystick = None
         self.controller_connected = False
 
+        # Current button states
         self.current_attack = False
         self.current_dodge = False
         self.current_interact = False
         self.current_pause = False
 
+        # Previous button states
         self.previous_attack = False
         self.previous_dodge = False
         self.previous_interact = False
@@ -118,6 +135,7 @@ class InputManager:
                 self.joystick = pygame.joystick.Joystick(0)
 
                 if not self.joystick.get_init():
+
                     self.joystick.init()
 
                 self.controller_connected = True
@@ -160,6 +178,7 @@ class InputManager:
             if self.joystick is None:
 
                 self.joystick = pygame.joystick.Joystick(0)
+
                 self.joystick.init()
 
             self.controller_connected = True
@@ -184,11 +203,16 @@ class InputManager:
 
         try:
 
-            if button >= self.joystick.get_numbuttons():
+            if (
+                button >=
+                self.joystick.get_numbuttons()
+            ):
                 return False
 
             return bool(
-                self.joystick.get_button(button)
+                self.joystick.get_button(
+                    button
+                )
             )
 
         except Exception:
@@ -204,11 +228,25 @@ class InputManager:
 
         self._check_controller()
 
+        # ----------------------------------------------------
         # Save previous state
-        self.previous_attack = self.current_attack
-        self.previous_dodge = self.current_dodge
-        self.previous_interact = self.current_interact
-        self.previous_pause = self.current_pause
+        # ----------------------------------------------------
+
+        self.previous_attack = (
+            self.current_attack
+        )
+
+        self.previous_dodge = (
+            self.current_dodge
+        )
+
+        self.previous_interact = (
+            self.current_interact
+        )
+
+        self.previous_pause = (
+            self.current_pause
+        )
 
         # ----------------------------------------------------
         # KEYBOARD
@@ -302,36 +340,184 @@ class InputManager:
 
 
     # ========================================================
+    # LEFT STICK PROCESSING
+    # ========================================================
+
+    def _process_left_stick(
+        self,
+        raw_x: float,
+        raw_y: float
+    ):
+
+        # ----------------------------------------------------
+        # Raw stick vector
+        # ----------------------------------------------------
+
+        vector = pygame.Vector2(
+            raw_x,
+            raw_y
+        )
+
+        magnitude = vector.length()
+
+        # ----------------------------------------------------
+        # No movement
+        # ----------------------------------------------------
+
+        if magnitude <= CONTROLLER_DEADZONE:
+
+            return pygame.Vector2(
+                0,
+                0
+            )
+
+        # ----------------------------------------------------
+        # Protect against calibration values > 1
+        # ----------------------------------------------------
+
+        if magnitude > 1.0:
+
+            magnitude = 1.0
+
+            if vector.length_squared() > 0:
+
+                vector.scale_to_length(
+                    1.0
+                )
+
+        # ----------------------------------------------------
+        # OUTER DEADZONE
+        #
+        # 0.18 -> starts moving
+        # 0.95 -> reaches full output
+        # ----------------------------------------------------
+
+        usable_range = (
+            CONTROLLER_OUTER_DEADZONE
+            - CONTROLLER_DEADZONE
+        )
+
+        if usable_range <= 0:
+
+            return pygame.Vector2(
+                0,
+                0
+            )
+
+        normalized_magnitude = (
+            magnitude
+            - CONTROLLER_DEADZONE
+        ) / usable_range
+
+        normalized_magnitude = max(
+            0.0,
+            min(
+                1.0,
+                normalized_magnitude
+            )
+        )
+
+        # ----------------------------------------------------
+        # RESPONSE CURVE
+        #
+        # output = magnitude ^ 1.5
+        # ----------------------------------------------------
+
+        curved_magnitude = (
+            normalized_magnitude
+            ** CONTROLLER_RESPONSE_CURVE
+        )
+
+        # ----------------------------------------------------
+        # Preserve direction
+        # ----------------------------------------------------
+
+        if vector.length_squared() > 0:
+
+            direction = vector.normalize()
+
+        else:
+
+            return pygame.Vector2(
+                0,
+                0
+            )
+
+        result = (
+            direction
+            * curved_magnitude
+        )
+
+        # ----------------------------------------------------
+        # Final safety clamp
+        # ----------------------------------------------------
+
+        if result.length_squared() > 1:
+
+            result.scale_to_length(
+                1
+            )
+
+        return result
+
+
+    # ========================================================
     # MOVEMENT
     # ========================================================
 
     def get_movement(self, keys):
 
+        # ----------------------------------------------------
+        # KEYBOARD MOVEMENT
+        # ----------------------------------------------------
+
         x = 0
         y = 0
 
-        # Keyboard
-        if any(keys[k] for k in MOVE_LEFT):
+        if any(
+            keys[k]
+            for k in MOVE_LEFT
+        ):
+
             x -= 1
 
-        if any(keys[k] for k in MOVE_RIGHT):
+        if any(
+            keys[k]
+            for k in MOVE_RIGHT
+        ):
+
             x += 1
 
-        if any(keys[k] for k in MOVE_UP):
+        if any(
+            keys[k]
+            for k in MOVE_UP
+        ):
+
             y -= 1
 
-        if any(keys[k] for k in MOVE_DOWN):
+        if any(
+            keys[k]
+            for k in MOVE_DOWN
+        ):
+
             y += 1
 
-        keyboard_movement = pygame.Vector2(
-            x,
-            y
+        keyboard_movement = (
+            pygame.Vector2(
+                x,
+                y
+            )
         )
 
-        # Controller
-        controller_movement = pygame.Vector2(
-            0,
-            0
+        # ----------------------------------------------------
+        # CONTROLLER MOVEMENT
+        # ----------------------------------------------------
+
+        controller_movement = (
+            pygame.Vector2(
+                0,
+                0
+            )
         )
 
         if (
@@ -341,26 +527,29 @@ class InputManager:
 
             try:
 
-                if self.joystick.get_numaxes() >= 2:
+                if (
+                    self.joystick.get_numaxes()
+                    >= 2
+                ):
 
-                    controller_movement.x = (
+                    raw_x = (
                         self.joystick.get_axis(
                             CONTROLLER_AXIS_X
                         )
                     )
 
-                    controller_movement.y = (
+                    raw_y = (
                         self.joystick.get_axis(
                             CONTROLLER_AXIS_Y
                         )
                     )
 
-                    # Deadzone
-                    if abs(controller_movement.x) < CONTROLLER_DEADZONE:
-                        controller_movement.x = 0
-
-                    if abs(controller_movement.y) < CONTROLLER_DEADZONE:
-                        controller_movement.y = 0
+                    controller_movement = (
+                        self._process_left_stick(
+                            raw_x,
+                            raw_y
+                        )
+                    )
 
             except Exception:
 
@@ -369,27 +558,45 @@ class InputManager:
                     0
                 )
 
-        # Controller has priority if stick is moving
-        if controller_movement.length_squared() > 0:
+        # ----------------------------------------------------
+        # CONTROLLER PRIORITY
+        # ----------------------------------------------------
 
-            self.last_input_device = "controller"
+        if (
+            controller_movement.length_squared()
+            > 0
+        ):
 
-            if controller_movement.length_squared() > 1:
-
-                controller_movement.scale_to_length(1)
+            self.last_input_device = (
+                "controller"
+            )
 
             return controller_movement
 
-        # Keyboard
+        # ----------------------------------------------------
+        # KEYBOARD
+        # ----------------------------------------------------
+
         if keyboard_movement.length_squared() > 0:
 
-            self.last_input_device = "keyboard"
+            self.last_input_device = (
+                "keyboard"
+            )
 
-            if keyboard_movement.length_squared() > 1:
+            if (
+                keyboard_movement.length_squared()
+                > 1
+            ):
 
-                keyboard_movement.scale_to_length(1)
+                keyboard_movement.scale_to_length(
+                    1
+                )
 
             return keyboard_movement
+
+        # ----------------------------------------------------
+        # NONE
+        # ----------------------------------------------------
 
         return pygame.Vector2(
             0,
@@ -454,6 +661,7 @@ class InputManager:
     def get_attack_prompt(self):
 
         if self.last_input_device == "controller":
+
             return "X / □  Attack"
 
         return "SPACE  Attack"
@@ -462,6 +670,7 @@ class InputManager:
     def get_dodge_prompt(self):
 
         if self.last_input_device == "controller":
+
             return "B / ○  Dodge"
 
         return "SHIFT  Dodge"
@@ -470,6 +679,7 @@ class InputManager:
     def get_interact_prompt(self):
 
         if self.last_input_device == "controller":
+
             return "A / ✕  Interact"
 
         return "E  Interact"
@@ -478,6 +688,7 @@ class InputManager:
     def get_pause_prompt(self):
 
         if self.last_input_device == "controller":
+
             return "START  Pause"
 
         return "ESC  Pause"

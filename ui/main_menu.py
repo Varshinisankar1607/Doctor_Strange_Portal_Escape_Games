@@ -1,18 +1,30 @@
 # ui/main_menu.py
-
 """
-Cinematic Doctor Strange Portal Escape main menu.
+Doctor Strange: Portal Escape
+Cinematic Animated Main Menu
 
-The existing menu layout, buttons, title and controls are preserved.
-Only the background has been changed to an original multiverse theme.
+FULL REPLACEMENT FILE
+
+Features:
+- Elegant cinematic serif typography
+- Curved/fantasy-style appearance
+- Animated title breathing
+- Animated golden shimmer
+- Soft magical glow
+- Deep cinematic shadow
+- Floating particles
+- Dimensional cracks
+- PLAY / HOW TO PLAY / EXIT
+- Mouse controls
+- Keyboard controls
 """
 
 import pygame
 import math
 import random
+import os
 
 from config.settings import SCREEN_WIDTH, SCREEN_HEIGHT
-from effects.glow import draw_glow
 from core.asset_manager import assets
 
 
@@ -23,9 +35,16 @@ class MainMenu:
     # =============================================================
 
     GOLD = (255, 180, 0)
-    ORANGE = (255, 100, 20)
+    GOLD_BRIGHT = (255, 220, 95)
+    GOLD_LIGHT = (255, 235, 165)
+
     WHITE = (255, 255, 255)
-    DARK = (10, 5, 20)
+    WHITE_SOFT = (245, 240, 255)
+
+    PURPLE = (125, 55, 220)
+    PURPLE_BRIGHT = (205, 120, 255)
+
+    BLACK = (5, 2, 12)
 
     # =============================================================
     # INITIALIZATION
@@ -33,15 +52,15 @@ class MainMenu:
 
     def __init__(self, font_large, font_med, font_small):
 
+        # Keep compatibility with existing Game class
         self.fl = font_large
         self.fm = font_med
         self.fs = font_small
 
-        # Animation timer
         self._t = 0.0
 
         # =========================================================
-        # HOMEPAGE BACKGROUND
+        # BACKGROUND
         # =========================================================
 
         self.home_bg = assets.get_image(
@@ -50,33 +69,99 @@ class MainMenu:
         )
 
         # =========================================================
-        # PARTICLES
+        # CINEMATIC FONTS
         # =========================================================
 
-        self._particles = [
-            (
-                random.uniform(0, SCREEN_WIDTH),
-                random.uniform(0, SCREEN_HEIGHT),
-                random.uniform(-0.5, 0.5),
-                random.uniform(-1.5, -0.3),
-                random.uniform(0.8, 1.8)
-            )
-            for _ in range(120)
-        ]
+        self.title_font = self._load_cinematic_font(
+            max(66, int(SCREEN_WIDTH * 0.062))
+        )
+
+        self.title_font_2 = self._load_cinematic_font(
+            max(62, int(SCREEN_WIDTH * 0.057))
+        )
+
+        self.subtitle_font = self._load_cinematic_font(
+            max(21, int(SCREEN_WIDTH * 0.0175))
+        )
+
+        self.button_font = self._load_cinematic_font(
+            max(29, int(SCREEN_WIDTH * 0.025))
+        )
+
+        # =========================================================
+        # FLOATING PARTICLES
+        # =========================================================
+
+        self._particles = []
+
+        for _ in range(120):
+
+            self._particles.append({
+                "x": random.uniform(
+                    0,
+                    SCREEN_WIDTH
+                ),
+
+                "y": random.uniform(
+                    0,
+                    SCREEN_HEIGHT
+                ),
+
+                "vx": random.uniform(
+                    -0.35,
+                    0.35
+                ),
+
+                "vy": random.uniform(
+                    -1.5,
+                    -0.3
+                ),
+
+                "speed": random.uniform(
+                    0.8,
+                    1.8
+                ),
+
+                "size": random.randint(
+                    1,
+                    3
+                ),
+
+                "phase": random.uniform(
+                    0,
+                    math.pi * 2
+                )
+            })
 
         # =========================================================
         # DIMENSIONAL CRACKS
         # =========================================================
 
-        self._cracks = [
-            (
-                random.randint(50, SCREEN_WIDTH - 50),
-                random.randint(50, SCREEN_HEIGHT - 50),
-                random.uniform(0, math.pi * 2),
-                random.randint(40, 100)
-            )
-            for _ in range(8)
-        ]
+        self._cracks = []
+
+        for _ in range(7):
+
+            self._cracks.append({
+                "x": random.randint(
+                    70,
+                    SCREEN_WIDTH - 70
+                ),
+
+                "y": random.randint(
+                    100,
+                    SCREEN_HEIGHT - 150
+                ),
+
+                "angle": random.uniform(
+                    0,
+                    math.pi * 2
+                ),
+
+                "length": random.randint(
+                    35,
+                    90
+                )
+            })
 
         # =========================================================
         # BUTTONS
@@ -94,22 +179,149 @@ class MainMenu:
         self.clicked = None
 
     # =============================================================
+    # LOAD CINEMATIC FONT
+    # =============================================================
+
+    def _load_cinematic_font(self, size):
+
+        """
+        Loads an elegant serif font available on Windows.
+
+        Priority:
+        1. Baskerville
+        2. Garamond
+        3. Constantia
+        4. Georgia
+        5. Cambria
+        6. Times New Roman
+
+        If none are available, Georgia is used as fallback.
+        """
+
+        candidates = [
+
+            # -----------------------------------------------------
+            # BASKERVILLE
+            # -----------------------------------------------------
+
+            r"C:\Windows\Fonts\BASKVILL.TTF",
+
+            # -----------------------------------------------------
+            # GARAMOND
+            # -----------------------------------------------------
+
+            r"C:\Windows\Fonts\GARA.TTF",
+
+            # -----------------------------------------------------
+            # CONSTANTIA
+            # -----------------------------------------------------
+
+            r"C:\Windows\Fonts\constan.ttf",
+
+            # -----------------------------------------------------
+            # GEORGIA
+            # -----------------------------------------------------
+
+            r"C:\Windows\Fonts\georgia.ttf",
+
+            # -----------------------------------------------------
+            # CAMBRIA
+            # -----------------------------------------------------
+
+            r"C:\Windows\Fonts\cambria.ttf",
+
+            # -----------------------------------------------------
+            # TIMES NEW ROMAN
+            # -----------------------------------------------------
+
+            r"C:\Windows\Fonts\times.ttf",
+        ]
+
+        for font_path in candidates:
+
+            try:
+
+                if os.path.exists(font_path):
+
+                    return pygame.font.Font(
+                        font_path,
+                        size
+                    )
+
+            except Exception:
+
+                pass
+
+        # ---------------------------------------------------------
+        # FALLBACK
+        # ---------------------------------------------------------
+
+        return pygame.font.SysFont(
+            "georgia",
+            size,
+            bold=True
+        )
+
+    # =============================================================
+    # FIT FONT TO SCREEN
+    # =============================================================
+
+    def _fit_font(
+        self,
+        font,
+        text,
+        max_width
+    ):
+
+        """
+        Automatically reduces the font size if the title
+        becomes too wide for the screen.
+        """
+
+        size = font.get_height()
+
+        while size > 20:
+
+            test_font = self._load_cinematic_font(
+                size
+            )
+
+            width = test_font.size(
+                text
+            )[0]
+
+            if width <= max_width:
+
+                return test_font
+
+            size -= 2
+
+        return font
+
+    # =============================================================
     # EVENT HANDLING
     # =============================================================
 
-    def handle_event(self, event, mouse_pos):
-
-        bx, by, bw, bh = self._button_rects()[self.selected]
+    def handle_event(
+        self,
+        event,
+        mouse_pos
+    ):
 
         # ---------------------------------------------------------
-        # MOUSE
+        # MOUSE MOVE
         # ---------------------------------------------------------
 
         if event.type == pygame.MOUSEMOTION:
 
             self.hovered = -1
 
-            for i, (rx, ry, rw, rh) in enumerate(
+            for i, (
+                rx,
+                ry,
+                rw,
+                rh
+            ) in enumerate(
                 self._button_rects()
             ):
 
@@ -127,12 +339,20 @@ class MainMenu:
 
         elif (
             event.type == pygame.MOUSEBUTTONDOWN
-            and event.button == 1
+            and
+            event.button == 1
         ):
 
-            if 0 <= self.hovered < len(self._buttons):
+            if (
+                0 <= self.hovered
+                < len(self._buttons)
+            ):
 
-                self.clicked = self._buttons[self.hovered]
+                self.clicked = (
+                    self._buttons[
+                        self.hovered
+                    ]
+                )
 
                 return self.clicked
 
@@ -142,6 +362,7 @@ class MainMenu:
 
         elif event.type == pygame.KEYDOWN:
 
+            # UP
             if event.key in (
                 pygame.K_UP,
                 pygame.K_w
@@ -151,6 +372,7 @@ class MainMenu:
                     self.selected - 1
                 ) % len(self._buttons)
 
+            # DOWN
             elif event.key in (
                 pygame.K_DOWN,
                 pygame.K_s
@@ -160,13 +382,16 @@ class MainMenu:
                     self.selected + 1
                 ) % len(self._buttons)
 
+            # ENTER
             elif event.key in (
                 pygame.K_RETURN,
                 pygame.K_KP_ENTER
             ):
 
                 self.clicked = (
-                    self._buttons[self.selected]
+                    self._buttons[
+                        self.selected
+                    ]
                 )
 
                 return self.clicked
@@ -179,443 +404,608 @@ class MainMenu:
 
     def _button_rects(self):
 
-        # IMPORTANT:
-        # These values are unchanged from your original menu.
+        bw = min(
+            390,
+            int(SCREEN_WIDTH * 0.29)
+        )
 
-        bw = 280
-        bh = 52
+        bh = 64
 
         cx = (
             SCREEN_WIDTH // 2
             - bw // 2
         )
 
-        base_y = (
-            SCREEN_HEIGHT * 2 // 3
+        base_y = int(
+            SCREEN_HEIGHT * 0.715
         )
 
         return [
             (
                 cx,
-                base_y + i * 68,
+                base_y + i * 78,
                 bw,
                 bh
             )
-            for i in range(len(self._buttons))
+
+            for i in range(
+                len(self._buttons)
+            )
         ]
 
     # =============================================================
     # UPDATE
     # =============================================================
 
-    def update(self, dt: float):
+    def update(
+        self,
+        dt: float
+    ):
 
         self._t += dt
 
         # ---------------------------------------------------------
-        # PARTICLE UPDATE
+        # PARTICLES
         # ---------------------------------------------------------
 
-        sw = SCREEN_WIDTH
-        sh = SCREEN_HEIGHT
+        for p in self._particles:
 
-        new_p = []
-
-        for (
-            x,
-            y,
-            vx,
-            vy,
-            life
-        ) in self._particles:
-
-            x += vx
-            y += vy
-
-            if y < -10:
-
-                y = sh + 10
-
-                x = random.uniform(
-                    0,
-                    sw
-                )
-
-            new_p.append(
-                (
-                    x,
-                    y,
-                    vx,
-                    vy,
-                    life
-                )
+            p["x"] += (
+                p["vx"]
+                * dt
+                * 30
             )
 
-        self._particles = new_p
+            p["y"] += (
+                p["vy"]
+                * p["speed"]
+                * dt
+                * 30
+            )
+
+            # Wrap top
+            if p["y"] < -10:
+
+                p["y"] = (
+                    SCREEN_HEIGHT + 10
+                )
+
+                p["x"] = random.uniform(
+                    0,
+                    SCREEN_WIDTH
+                )
+
+            # Wrap left
+            if p["x"] < -10:
+
+                p["x"] = (
+                    SCREEN_WIDTH + 10
+                )
+
+            # Wrap right
+            elif p["x"] > SCREEN_WIDTH + 10:
+
+                p["x"] = -10
 
     # =============================================================
-    # DRAW
+    # DRAW PARTICLE
     # =============================================================
 
-    def draw(
+    def _draw_particle(
         self,
-        surface: pygame.Surface
+        surface,
+        x,
+        y,
+        size,
+        alpha
+    ):
+
+        particle = pygame.Surface(
+            (
+                size * 4 + 4,
+                size * 4 + 4
+            ),
+            pygame.SRCALPHA
+        )
+
+        center = (
+            size * 2 + 2,
+            size * 2 + 2
+        )
+
+        # ---------------------------------------------------------
+        # SOFT PURPLE GLOW
+        # ---------------------------------------------------------
+
+        pygame.draw.circle(
+            particle,
+            (
+                190,
+                160,
+                255,
+                max(
+                    20,
+                    int(alpha * 0.35)
+                )
+            ),
+            center,
+            size * 2
+        )
+
+        # ---------------------------------------------------------
+        # BRIGHT CENTER
+        # ---------------------------------------------------------
+
+        pygame.draw.circle(
+            particle,
+            (
+                235,
+                220,
+                255,
+                max(
+                    40,
+                    int(alpha)
+                )
+            ),
+            center,
+            max(
+                1,
+                size
+            )
+        )
+
+        surface.blit(
+            particle,
+            (
+                int(
+                    x - center[0]
+                ),
+                int(
+                    y - center[1]
+                )
+            )
+        )
+
+    # =============================================================
+    # DRAW DIMENSIONAL CRACKS
+    # =============================================================
+
+    def _draw_cracks(
+        self,
+        surface
     ):
 
         t = self._t
 
-        sw = SCREEN_WIDTH
-        sh = SCREEN_HEIGHT
+        for crack in self._cracks:
 
-        # =========================================================
-        # NEW MULTIVERSE BACKGROUND
-        # =========================================================
+            cx = crack["x"]
+            cy = crack["y"]
 
-        surface.blit(
-            self.home_bg,
-            (0, 0)
-        )
+            base_angle = (
+                crack["angle"]
+            )
 
-        # =========================================================
-        # DARK TRANSPARENT OVERLAY
-        # =========================================================
-        # Keeps title and buttons readable without changing
-        # their position or layout.
+            length = (
+                crack["length"]
+            )
 
-        overlay = pygame.Surface(
-            (sw, sh),
-            pygame.SRCALPHA
-        )
+            pulse = (
+                math.sin(
+                    t * 1.5
+                    + cx * 0.01
+                )
+                * 0.12
+            )
 
-        overlay.fill(
-            (5, 2, 20, 45)
-        )
+            for segment in range(3):
 
-        surface.blit(
-            overlay,
-            (0, 0)
-        )
+                angle = (
+                    base_angle
+                    + segment * 0.45
+                    + pulse
+                )
 
-        # =========================================================
-        # DIMENSIONAL CRACKS
-        # =========================================================
-
-        for (
-            cx2,
-            cy2,
-            angle,
-            length
-        ) in self._cracks:
-
-            for k in range(3):
-
-                seg_angle = (
-                    angle + k * 0.45
+                seg_length = (
+                    length
+                    * (segment + 1)
+                    / 3
                 )
 
                 x2 = (
-                    cx2
-                    + int(
-                        math.cos(seg_angle)
-                        * length
-                        * (k + 1)
-                        / 3
-                    )
+                    cx
+                    + math.cos(angle)
+                    * seg_length
                 )
 
                 y2 = (
-                    cy2
-                    + int(
-                        math.sin(seg_angle)
-                        * length
-                        * (k + 1)
-                        / 3
-                    )
-                )
-
-                crack_col = (
-                    100,
-                    45,
-                    210
+                    cy
+                    + math.sin(angle)
+                    * seg_length
                 )
 
                 pygame.draw.line(
                     surface,
-                    crack_col,
-                    (cx2, cy2),
-                    (x2, y2),
+                    (
+                        100,
+                        45,
+                        210
+                    ),
+                    (
+                        int(cx),
+                        int(cy)
+                    ),
+                    (
+                        int(x2),
+                        int(y2)
+                    ),
                     2
                 )
 
-        # =========================================================
-        # MYSTICAL SYMBOLS / MANDALA
-        # =========================================================
+    # =============================================================
+    # CINEMATIC TEXT
+    # =============================================================
 
-        sym_cx = sw // 2
-        sym_cy = sh // 2 - 30
+    def _draw_glow_text(
+        self,
+        surface,
+        font,
+        text,
+        center_x,
+        center_y,
+        fill,
+        outline,
+        outline_width=3,
+        glow_strength=45,
+        pulse=True
+    ):
 
-        for ring in range(4):
+        # ---------------------------------------------------------
+        # TITLE BREATHING ANIMATION
+        # ---------------------------------------------------------
 
-            r2 = 60 + ring * 40
+        if pulse:
 
-            pts = 12 + ring * 6
-
-            for p in range(pts):
-
-                a = (
-                    2
-                    * math.pi
-                    * p
-                    / pts
-                    + t
-                    * (
-                        0.3
-                        if ring % 2 == 0
-                        else -0.3
-                    )
+            breathe = (
+                math.sin(
+                    self._t * 1.8
                 )
+                * 1.2
+            )
 
-                x2 = (
-                    sym_cx
-                    + int(
-                        math.cos(a)
-                        * r2
-                    )
-                )
+            center_y += breathe
 
-                y2 = (
-                    sym_cy
-                    + int(
-                        math.sin(a)
-                        * r2
-                    )
-                )
+        # ---------------------------------------------------------
+        # MAIN TEXT
+        # ---------------------------------------------------------
 
-                dot_col = (
-                    255,
-                    180 - ring * 30,
-                    0
-                )
-
-                pygame.draw.circle(
-                    surface,
-                    dot_col,
-                    (x2, y2),
-                    2 + (pts % 3)
-                )
-
-        # =========================================================
-        # CENTRAL GOLDEN PORTAL
-        # =========================================================
-
-        portal_r = int(
-            90
-            + math.sin(t * 1.2) * 8
+        text_surface = font.render(
+            text,
+            True,
+            fill
         )
 
-        draw_glow(
-            surface,
-            (sym_cx, sym_cy),
-            portal_r + 40,
-            self.GOLD,
-            80
+        rect = text_surface.get_rect(
+            center=(
+                int(center_x),
+                int(center_y)
+            )
         )
 
         # ---------------------------------------------------------
-        # PORTAL INNER BODY
+        # SOFT MAGIC GLOW
         # ---------------------------------------------------------
 
-        inner_s = pygame.Surface(
+        glow_size = (
+            text_surface.get_width()
+            + 70,
+
+            text_surface.get_height()
+            + 70
+        )
+
+        glow_surface = pygame.Surface(
+            glow_size,
+            pygame.SRCALPHA
+        )
+
+        glow_text = font.render(
+            text,
+            True,
+            fill
+        )
+
+        pulse_alpha = int(
+            glow_strength
+            + math.sin(
+                self._t * 2.2
+            ) * 12
+        )
+
+        pulse_alpha = max(
+            10,
+            min(
+                90,
+                pulse_alpha
+            )
+        )
+
+        glow_text.set_alpha(
+            pulse_alpha
+        )
+
+        gx = (
+            glow_size[0] // 2
+            - glow_text.get_width() // 2
+        )
+
+        gy = (
+            glow_size[1] // 2
+            - glow_text.get_height() // 2
+        )
+
+        # Multiple glow passes
+        for ox, oy in (
+            (-5, 0),
+            (5, 0),
+            (0, -5),
+            (0, 5),
+            (0, 0),
+        ):
+
+            glow_surface.blit(
+                glow_text,
+                (
+                    gx + ox,
+                    gy + oy
+                )
+            )
+
+        surface.blit(
+            glow_surface,
             (
-                portal_r * 2 + 20,
-                int(portal_r * 1.4) + 20
+                rect.x
+                - (
+                    glow_size[0]
+                    - rect.width
+                ) // 2,
+
+                rect.y
+                - (
+                    glow_size[1]
+                    - rect.height
+                ) // 2
+            )
+        )
+
+        # ---------------------------------------------------------
+        # DEEP SHADOW
+        # ---------------------------------------------------------
+
+        shadow = font.render(
+            text,
+            True,
+            (
+                12,
+                3,
+                22
+            )
+        )
+
+        shadow_rect = shadow.get_rect(
+            center=(
+                rect.centerx + 4,
+                rect.centery + 6
+            )
+        )
+
+        surface.blit(
+            shadow,
+            shadow_rect
+        )
+
+        # ---------------------------------------------------------
+        # DARK OUTLINE
+        # ---------------------------------------------------------
+
+        outline_surface = font.render(
+            text,
+            True,
+            outline
+        )
+
+        for dx in range(
+            -outline_width,
+            outline_width + 1
+        ):
+
+            for dy in range(
+                -outline_width,
+                outline_width + 1
+            ):
+
+                if (
+                    dx == 0
+                    and
+                    dy == 0
+                ):
+                    continue
+
+                surface.blit(
+                    outline_surface,
+                    (
+                        rect.x + dx,
+                        rect.y + dy
+                    )
+                )
+
+        # ---------------------------------------------------------
+        # MAIN TEXT
+        # ---------------------------------------------------------
+
+        surface.blit(
+            text_surface,
+            rect
+        )
+
+        return rect
+
+    # =============================================================
+    # DRAW TITLE
+    # =============================================================
+
+    def _draw_title(
+        self,
+        surface
+    ):
+
+        sw = SCREEN_WIDTH
+        sh = SCREEN_HEIGHT
+
+        # =========================================================
+        # DOCTOR STRANGE
+        # =========================================================
+
+        title1 = "DOCTOR STRANGE:"
+
+        title1_font = self._fit_font(
+            self.title_font,
+            title1,
+            int(sw * 0.82)
+        )
+
+        title1_y = int(
+            sh * 0.105
+        )
+
+        self._draw_glow_text(
+            surface,
+            title1_font,
+            title1,
+            sw // 2,
+            title1_y,
+            self.GOLD_BRIGHT,
+            (
+                55,
+                16,
+                5
+            ),
+            outline_width=5,
+            glow_strength=50,
+            pulse=True
+        )
+
+        # =========================================================
+        # PORTAL ESCAPE
+        # =========================================================
+
+        title2 = "PORTAL ESCAPE"
+
+        title2_font = self._fit_font(
+            self.title_font_2,
+            title2,
+            int(sw * 0.70)
+        )
+
+        title2_y = int(
+            sh * 0.205
+        )
+
+        self._draw_glow_text(
+            surface,
+            title2_font,
+            title2,
+            sw // 2,
+            title2_y,
+            self.WHITE,
+            (
+                35,
+                12,
+                75
+            ),
+            outline_width=5,
+            glow_strength=42,
+            pulse=True
+        )
+
+        # =========================================================
+        # ANIMATED GOLDEN SHIMMER
+        # =========================================================
+
+        shimmer_y = int(
+            sh * 0.255
+        )
+
+        shimmer_width = int(
+            sw * 0.32
+        )
+
+        travel = (
+            math.sin(
+                self._t * 1.2
+            )
+            * 0.5
+            + 0.5
+        )
+
+        shimmer_x = int(
+            sw // 2
+            - shimmer_width // 2
+            + (
+                travel - 0.5
+            )
+            * shimmer_width
+            * 0.7
+        )
+
+        shimmer = pygame.Surface(
+            (
+                shimmer_width,
+                2
             ),
             pygame.SRCALPHA
         )
 
-        pygame.draw.ellipse(
-            inner_s,
-            (5, 2, 30, 230),
-            (
-                10,
-                10,
-                portal_r * 2,
-                int(portal_r * 1.3)
-            )
-        )
+        for x in range(
+            shimmer_width
+        ):
 
-        surface.blit(
-            inner_s,
-            (
-                sym_cx - portal_r - 10,
-                sym_cy
-                - int(portal_r * 0.65)
-                - 10
-            )
-        )
-
-        # =========================================================
-        # ROTATING PORTAL RINGS
-        # =========================================================
-
-        for ring_i in range(3):
-
-            ring_r = (
-                portal_r
-                - ring_i * 12
+            distance = abs(
+                x
+                - shimmer_width // 2
             )
 
-            ang = (
-                t
-                * (60 + ring_i * 20)
-                * (
-                    1
-                    if ring_i % 2 == 0
-                    else -1
+            alpha = max(
+                0,
+                110
+                - int(
+                    distance * 3
                 )
             )
 
-            ring_s = pygame.Surface(
-                (
-                    ring_r * 2 + 6,
-                    ring_r * 2 + 6
-                ),
-                pygame.SRCALPHA
-            )
-
-            col_a = (
-                220
-                - ring_i * 50
-            )
-
-            pygame.draw.ellipse(
-                ring_s,
-                (
-                    *self.GOLD,
-                    col_a
-                ),
-                (
-                    3,
-                    3,
-                    ring_r * 2,
-                    ring_r * 2
-                ),
-                3
-            )
-
-            rot = pygame.transform.rotate(
-                ring_s,
-                ang
-            )
-
-            rw, rh = rot.get_size()
-
-            surface.blit(
-                rot,
-                (
-                    sym_cx - rw // 2,
-                    sym_cy - rh // 2
-                ),
-                special_flags=pygame.BLEND_RGBA_ADD
-            )
-
-        # =========================================================
-        # PORTAL FRAME
-        # =========================================================
-
-        pygame.draw.ellipse(
-            surface,
-            self.GOLD,
-            (
-                sym_cx - portal_r,
-                sym_cy - int(portal_r * 0.65),
-                portal_r * 2,
-                int(portal_r * 1.3)
-            ),
-            4
-        )
-
-        # =========================================================
-        # FLOATING PARTICLES
-        # =========================================================
-
-        for (
-            px,
-            py,
-            _,
-            _,
-            _
-        ) in self._particles:
-
-            alpha = int(
-                180
-                + math.sin(
-                    t * 2
-                    + px * 0.05
-                ) * 60
-            )
-
-            s2 = pygame.Surface(
-                (4, 4),
-                pygame.SRCALPHA
-            )
-
-            pygame.draw.circle(
-                s2,
+            pygame.draw.line(
+                shimmer,
                 (
                     255,
-                    180,
-                    50,
+                    220,
+                    110,
                     alpha
                 ),
-                (2, 2),
-                2
-            )
-
-            surface.blit(
-                s2,
                 (
-                    int(px),
-                    int(py)
+                    x,
+                    0
+                ),
+                (
+                    x,
+                    1
                 )
             )
 
-        # =========================================================
-        # TITLE
-        # =========================================================
-
-        title1 = self.fl.render(
-            "DOCTOR STRANGE:",
-            True,
-            self.GOLD
-        )
-
-        title2 = self.fl.render(
-            "PORTAL ESCAPE",
-            True,
-            self.WHITE
-        )
-
-        tx1 = (
-            sw // 2
-            - title1.get_width() // 2
-        )
-
-        ty = 60
-
         surface.blit(
-            title1,
-            (tx1, ty)
-        )
-
-        surface.blit(
-            title2,
+            shimmer,
             (
-                sw // 2
-                - title2.get_width() // 2,
-                ty
-                + title1.get_height()
-                + 6
+                shimmer_x,
+                shimmer_y
             )
         )
 
@@ -623,26 +1013,46 @@ class MainMenu:
         # SUBTITLE
         # =========================================================
 
-        sub = self.fs.render(
-            "FIND THE RIGHT PORTAL BEFORE THE MULTIVERSE COLLAPSES",
-            True,
-            (200, 160, 80)
+        subtitle_text = (
+            "FIND THE RIGHT PORTAL BEFORE "
+            "THE MULTIVERSE COLLAPSES"
         )
 
-        surface.blit(
-            sub,
+        subtitle_font = self._fit_font(
+            self.subtitle_font,
+            subtitle_text,
+            int(sw * 0.72)
+        )
+
+        subtitle_y = int(
+            sh * 0.295
+        )
+
+        self._draw_glow_text(
+            surface,
+            subtitle_font,
+            subtitle_text,
+            sw // 2,
+            subtitle_y,
+            self.GOLD_LIGHT,
             (
-                sw // 2
-                - sub.get_width() // 2,
-                ty
-                + title1.get_height() * 2
-                + 16
-            )
+                30,
+                10,
+                40
+            ),
+            outline_width=2,
+            glow_strength=18,
+            pulse=False
         )
 
-        # =========================================================
-        # BUTTONS
-        # =========================================================
+    # =============================================================
+    # DRAW BUTTONS
+    # =============================================================
+
+    def _draw_buttons(
+        self,
+        surface
+    ):
 
         highlight = (
             self.hovered
@@ -659,33 +1069,107 @@ class MainMenu:
             self._button_rects()
         ):
 
-            is_sel = (
+            is_selected = (
                 i == highlight
             )
 
-            # -----------------------------------------------------
-            # BUTTON PANEL
-            # -----------------------------------------------------
-
             panel = pygame.Surface(
-                (rw, rh),
+                (
+                    rw,
+                    rh
+                ),
                 pygame.SRCALPHA
             )
 
-            if is_sel:
+            # -----------------------------------------------------
+            # PANEL
+            # -----------------------------------------------------
+
+            if is_selected:
 
                 panel.fill(
                     (
-                        255,
-                        180,
-                        0,
-                        50
+                        80,
+                        35,
+                        8,
+                        145
                     )
+                )
+
+            else:
+
+                panel.fill(
+                    (
+                        8,
+                        5,
+                        28,
+                        195
+                    )
+                )
+
+            # -----------------------------------------------------
+            # SELECTED BORDER
+            # -----------------------------------------------------
+
+            if is_selected:
+
+                border_alpha = int(
+                    190
+                    + math.sin(
+                        self._t * 4
+                    ) * 50
                 )
 
                 pygame.draw.rect(
                     panel,
-                    self.GOLD,
+                    (
+                        255,
+                        215,
+                        80,
+                        border_alpha
+                    ),
+                    (
+                        0,
+                        0,
+                        rw,
+                        rh
+                    ),
+                    3,
+                    border_radius=10
+                )
+
+                pygame.draw.rect(
+                    panel,
+                    (
+                        255,
+                        145,
+                        20,
+                        125
+                    ),
+                    (
+                        5,
+                        5,
+                        rw - 10,
+                        rh - 10
+                    ),
+                    1,
+                    border_radius=8
+                )
+
+            # -----------------------------------------------------
+            # NORMAL BORDER
+            # -----------------------------------------------------
+
+            else:
+
+                pygame.draw.rect(
+                    panel,
+                    (
+                        105,
+                        60,
+                        190,
+                        190
+                    ),
                     (
                         0,
                         0,
@@ -693,79 +1177,114 @@ class MainMenu:
                         rh
                     ),
                     2,
-                    border_radius=6
-                )
-
-            else:
-
-                panel.fill(
-                    (
-                        30,
-                        20,
-                        60,
-                        150
-                    )
-                )
-
-                pygame.draw.rect(
-                    panel,
-                    (
-                        100,
-                        60,
-                        180
-                    ),
-                    (
-                        0,
-                        0,
-                        rw,
-                        rh
-                    ),
-                    1,
-                    border_radius=6
+                    border_radius=10
                 )
 
             surface.blit(
                 panel,
-                (rx, ry)
+                (
+                    rx,
+                    ry
+                )
             )
 
             # -----------------------------------------------------
             # BUTTON TEXT
             # -----------------------------------------------------
 
-            col = (
-                self.GOLD
-                if is_sel
-                else (200, 190, 220)
+            text_color = (
+                self.GOLD_BRIGHT
+                if is_selected
+                else self.WHITE_SOFT
             )
 
-            scale = (
-                1.06
-                if is_sel
-                else 1.0
-            )
+            text = self._buttons[i]
 
-            txt = self.fm.render(
-                self._buttons[i],
+            font = self.button_font
+
+            # Smaller font for HOW TO PLAY
+            if text == "HOW TO PLAY":
+
+                font = self._load_cinematic_font(
+                    max(
+                        25,
+                        int(
+                            font.get_height()
+                            * 0.86
+                        )
+                    )
+                )
+
+            txt = font.render(
+                text,
                 True,
-                col
+                text_color
             )
 
-            if is_sel:
+            # -----------------------------------------------------
+            # SELECTED SCALE
+            # -----------------------------------------------------
 
-                txt = pygame.transform.scale(
+            if is_selected:
+
+                scale = 1.045
+
+                txt = pygame.transform.smoothscale(
                     txt,
                     (
                         int(
                             txt.get_width()
                             * scale
                         ),
+
                         int(
                             txt.get_height()
                             * scale
                         )
                     )
                 )
+
+            # -----------------------------------------------------
+            # TEXT SHADOW
+            # -----------------------------------------------------
+
+            shadow_txt = font.render(
+                text,
+                True,
+                (
+                    12,
+                    3,
+                    22
+                )
+            )
+
+            if is_selected:
+
+                shadow_txt = (
+                    pygame.transform.smoothscale(
+                        shadow_txt,
+                        txt.get_size()
+                    )
+                )
+
+            surface.blit(
+                shadow_txt,
+                (
+                    rx
+                    + rw // 2
+                    - shadow_txt.get_width() // 2
+                    + 2,
+
+                    ry
+                    + rh // 2
+                    - shadow_txt.get_height() // 2
+                    + 3
+                )
+            )
+
+            # -----------------------------------------------------
+            # MAIN BUTTON TEXT
+            # -----------------------------------------------------
 
             surface.blit(
                 txt,
@@ -779,3 +1298,161 @@ class MainMenu:
                     - txt.get_height() // 2
                 )
             )
+
+    # =============================================================
+    # DRAW
+    # =============================================================
+
+    def draw(
+        self,
+        surface: pygame.Surface
+    ):
+
+        t = self._t
+
+        sw = SCREEN_WIDTH
+        sh = SCREEN_HEIGHT
+
+        # =========================================================
+        # BACKGROUND
+        # =========================================================
+
+        surface.blit(
+            self.home_bg,
+            (
+                0,
+                0
+            )
+        )
+
+        # =========================================================
+        # DARK CINEMATIC OVERLAY
+        # =========================================================
+
+        overlay = pygame.Surface(
+            (
+                sw,
+                sh
+            ),
+            pygame.SRCALPHA
+        )
+
+        overlay.fill(
+            (
+                5,
+                2,
+                20,
+                48
+            )
+        )
+
+        surface.blit(
+            overlay,
+            (
+                0,
+                0
+            )
+        )
+
+        # =========================================================
+        # LOWER DARK GRADIENT
+        # =========================================================
+
+        gradient = pygame.Surface(
+            (
+                sw,
+                sh
+            ),
+            pygame.SRCALPHA
+        )
+
+        for y in range(
+            sh // 2,
+            sh
+        ):
+
+            alpha = int(
+                15
+                + (
+                    (
+                        y
+                        - sh / 2
+                    )
+                    /
+                    (sh / 2)
+                )
+                * 115
+            )
+
+            pygame.draw.line(
+                gradient,
+                (
+                    0,
+                    0,
+                    10,
+                    alpha
+                ),
+                (
+                    0,
+                    y
+                ),
+                (
+                    sw,
+                    y
+                )
+            )
+
+        surface.blit(
+            gradient,
+            (
+                0,
+                0
+            )
+        )
+
+        # =========================================================
+        # DIMENSIONAL CRACKS
+        # =========================================================
+
+        self._draw_cracks(
+            surface
+        )
+
+        # =========================================================
+        # FLOATING PARTICLES
+        # =========================================================
+
+        for p in self._particles:
+
+            alpha = int(
+                110
+                + 70
+                * math.sin(
+                    t * 2
+                    + p["phase"]
+                )
+            )
+
+            self._draw_particle(
+                surface,
+                p["x"],
+                p["y"],
+                p["size"],
+                alpha
+            )
+
+        # =========================================================
+        # TITLE
+        # =========================================================
+
+        self._draw_title(
+            surface
+        )
+
+        # =========================================================
+        # BUTTONS
+        # =========================================================
+
+        self._draw_buttons(
+            surface
+        )

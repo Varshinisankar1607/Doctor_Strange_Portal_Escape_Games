@@ -1,254 +1,1219 @@
 # objects/portal.py
-"""Golden mystical portal — rendered with Pygame procedural graphics."""
+"""
+CINEMATIC MYSTICAL PORTAL
+Doctor Strange: Portal Escape
+
+Full replacement portal renderer.
+
+Gameplay/collision API is kept compatible with the existing project.
+The collision rectangle remains invisible.
+
+Visual style:
+- Tall vertical portal
+- Multiple magical rings
+- Swirling energy
+- Glowing runes
+- Bright sparks
+- Animated inner vortex
+- Soft outer glow
+- Stage-specific colors
+"""
+
 import pygame
 import math
 import random
 
+
+# ================================================================
+# GAMEPLAY SIZE
+# ================================================================
+
 PORTAL_W = 80
 PORTAL_H = 110
-INTERACT_DIST = 90  # pixels from player center to portal center
+
+INTERACT_DIST = 90
+
+
+# ================================================================
+# PORTAL
+# ================================================================
 
 class Portal:
-    """A glowing mystical portal."""
+
+    # ------------------------------------------------------------
+    # STAGE COLORS
+    # ------------------------------------------------------------
 
     COLORS_BY_STAGE = {
-        1: (255, 180, 0),    # golden
-        2: (80, 200, 255),   # cosmic cyan
-        3: (200, 100, 255),  # purple alien
-        4: (150, 220, 255),  # icy
-        5: (255, 80, 20),    # infernal
+        1: (255, 145, 20),      # Orange / Gold
+        2: (40, 190, 255),      # Cyan / Blue
+        3: (185, 60, 255),      # Purple
+        4: (130, 220, 255),     # Ice Blue
+        5: (255, 55, 15),       # Hell Red
     }
 
-    def __init__(self, x: int, y: int, stage: int, is_correct: bool,
-                 label: str = "", portal_id: int = 0):
-        self.rect       = pygame.Rect(x, y, PORTAL_W, PORTAL_H)
-        self.stage      = stage
-        self.is_correct = is_correct
-        self.label      = label
-        self.portal_id  = portal_id
-        self.activated  = False
-        self._angle     = 0.0
-        self._pulse     = 0.0
-        self._particles: list = []
-        self._color     = self.COLORS_BY_STAGE.get(stage, (255, 180, 0))
-        self._particle_timer = 0.0
+    def __init__(
+        self,
+        x,
+        y,
+        stage,
+        is_correct,
+        label="",
+        portal_id=0
+    ):
 
-    def update(self, dt: float):
-        self._angle    = (self._angle + dt * 90) % 360
-        self._pulse    = (self._pulse  + dt * 2.5) % (2 * math.pi)
-        self._particle_timer += dt
-        if self._particle_timer >= 0.06:
-            self._particle_timer = 0
+        # IMPORTANT:
+        # This rectangle is for GAMEPLAY only.
+        # It is NOT drawn on screen.
+
+        self.rect = pygame.Rect(
+            x,
+            y,
+            PORTAL_W,
+            PORTAL_H
+        )
+
+        self.stage = stage
+        self.is_correct = is_correct
+        self.label = label
+        self.portal_id = portal_id
+
+        self.activated = False
+
+        # --------------------------------------------------------
+        # Animation
+        # --------------------------------------------------------
+
+        self.rotation = random.uniform(
+            0,
+            math.tau
+        )
+
+        self.rotation2 = random.uniform(
+            0,
+            math.tau
+        )
+
+        self.rotation3 = random.uniform(
+            0,
+            math.tau
+        )
+
+        self.pulse = random.uniform(
+            0,
+            math.tau
+        )
+
+        self.swirl_time = random.uniform(
+            0,
+            math.tau
+        )
+
+        # --------------------------------------------------------
+        # Particles
+        # --------------------------------------------------------
+
+        self.particles = []
+
+        self.spawn_timer = 0.0
+
+        # --------------------------------------------------------
+        # Color
+        # --------------------------------------------------------
+
+        self.color = self.COLORS_BY_STAGE.get(
+            stage,
+            (255, 145, 20)
+        )
+
+
+    # ============================================================
+    # UPDATE
+    # ============================================================
+
+    def update(self, dt):
+
+        # --------------------------------------------------------
+        # ROTATING MAGIC
+        # --------------------------------------------------------
+
+        self.rotation += dt * 1.7
+        self.rotation2 -= dt * 1.15
+        self.rotation3 += dt * 2.1
+
+        # --------------------------------------------------------
+        # PULSE
+        # --------------------------------------------------------
+
+        self.pulse += dt * 3.2
+
+        # --------------------------------------------------------
+        # SWIRL
+        # --------------------------------------------------------
+
+        self.swirl_time += dt * 4.0
+
+        # --------------------------------------------------------
+        # PARTICLE SPAWN
+        # --------------------------------------------------------
+
+        self.spawn_timer += dt
+
+        if self.spawn_timer >= 0.035:
+
+            self.spawn_timer = 0
+
             self._spawn_particle()
-        alive = []
-        for p in self._particles:
+
+        # --------------------------------------------------------
+        # UPDATE PARTICLES
+        # --------------------------------------------------------
+
+        new_particles = []
+
+        for p in self.particles:
+
+            # x
+            # y
+            # vx
+            # vy
+            # life
+            # max_life
+            # size
+
             p[4] -= dt
+
             if p[4] > 0:
-                p[0] += p[2]
-                p[1] += p[3]
-                alive.append(p)
-        self._particles = alive
+
+                p[0] += p[2] * dt
+                p[1] += p[3] * dt
+
+                # Magical floating motion
+                p[3] -= 2.0 * dt
+
+                new_particles.append(p)
+
+        self.particles = new_particles
+
+        # Keep particle count under control
+
+        if len(self.particles) > 75:
+
+            self.particles = self.particles[-75:]
+
+
+    # ============================================================
+    # PARTICLES
+    # ============================================================
 
     def _spawn_particle(self):
+
         cx = self.rect.centerx
         cy = self.rect.centery
-        ang = random.uniform(0, math.pi * 2)
-        r   = random.uniform(30, 50)
-        px  = cx + math.cos(ang) * r
-        py  = cy + math.sin(ang) * r * 0.65
-        vx  = math.cos(ang) * random.uniform(0.3, 1.0)
-        vy  = math.sin(ang) * random.uniform(0.3, 1.0)
-        life = random.uniform(0.4, 0.9)
-        self._particles.append([px, py, vx, vy, life, life])
 
-    def is_player_nearby(self, player_rect: pygame.Rect) -> bool:
-        px, py = player_rect.centerx, player_rect.centery
-        cx, cy = self.rect.centerx, self.rect.centery
-        return math.hypot(px-cx, py-cy) < INTERACT_DIST
-
-    def draw(self, surface: pygame.Surface, camera, font=None):
-        cx = self.rect.centerx - int(camera.offset_x)
-        cy = self.rect.centery - int(camera.offset_y)
-        col = self._color
-
-        pulse = math.sin(self._pulse)
-        outer_r = 48 + int(pulse * 4)
-        inner_r = 32 + int(pulse * 2)
-
-        # --- Outer glow ---
-        glow_surf = pygame.Surface((outer_r*4, outer_r*4), pygame.SRCALPHA)
-        for gr in range(outer_r*2, 0, -4):
-            alpha = int(60 * (1 - gr/(outer_r*2)))
-            pygame.draw.ellipse(glow_surf, (*col, alpha),
-                                (outer_r*2-gr, int(outer_r*2-gr*0.65),
-                                 gr*2, int(gr*1.3)), 0)
-        surface.blit(glow_surf, (cx - outer_r*2, cy - outer_r*2),
-                     special_flags=pygame.BLEND_RGBA_ADD)
-
-        # --- Portal oval body ---
-        portal_surf = pygame.Surface((outer_r*2+10, int(outer_r*2*0.65)+10), pygame.SRCALPHA)
-        ps_cx = outer_r + 5
-        ps_cy = int(outer_r * 0.65) + 5
-
-        # Dark interior
-        pygame.draw.ellipse(
-            portal_surf,
-            (10, 5, 30, 220),
-            (5, 5, outer_r*2, int(outer_r*1.3))
+        angle = random.uniform(
+            0,
+            math.tau
         )
 
-        # Interior shimmer
-        shimmer = (
-            min(255, col[0]//2),
-            min(255, col[1]//2),
-            min(255, col[2]//2)
+        # Tall portal shape
+
+        rx = random.uniform(
+            38,
+            54
         )
 
-        pygame.draw.ellipse(
-            portal_surf,
-            (*shimmer, 80),
-            (15, 15, outer_r*2-20, int(outer_r*1.3)-20)
+        ry = random.uniform(
+            58,
+            82
         )
 
-        surface.blit(
-            portal_surf,
+        x = (
+            cx
+            + math.cos(angle) * rx
+        )
+
+        y = (
+            cy
+            + math.sin(angle) * ry
+        )
+
+        # Particles slowly rise
+
+        vx = random.uniform(
+            -12,
+            12
+        )
+
+        vy = random.uniform(
+            -35,
+            -5
+        )
+
+        life = random.uniform(
+            0.35,
+            0.9
+        )
+
+        size = random.choice(
+            [1, 1, 2, 2, 3]
+        )
+
+        self.particles.append(
+            [
+                x,
+                y,
+                vx,
+                vy,
+                life,
+                life,
+                size
+            ]
+        )
+
+
+    # ============================================================
+    # PLAYER DISTANCE
+    # ============================================================
+
+    def is_player_nearby(
+        self,
+        player_rect
+    ):
+
+        dx = (
+            player_rect.centerx
+            - self.rect.centerx
+        )
+
+        dy = (
+            player_rect.centery
+            - self.rect.centery
+        )
+
+        distance = math.sqrt(
+            dx * dx + dy * dy
+        )
+
+        return distance < INTERACT_DIST
+
+
+    # ============================================================
+    # COLOR HELPERS
+    # ============================================================
+
+    def _mix_color(
+        self,
+        color,
+        amount
+    ):
+
+        return (
+            min(
+                255,
+                int(color[0] + amount)
+            ),
+
+            min(
+                255,
+                int(color[1] + amount)
+            ),
+
+            min(
+                255,
+                int(color[2] + amount)
+            )
+        )
+
+
+    # ============================================================
+    # DRAW SOFT GLOW
+    # ============================================================
+
+    def _draw_glow(
+        self,
+        surface,
+        cx,
+        cy
+    ):
+
+        size = 190
+
+        glow = pygame.Surface(
             (
-                cx-outer_r-5,
-                cy-int(outer_r*0.65)-5
-            )
+                size,
+                size
+            ),
+            pygame.SRCALPHA
         )
 
-        # --- Rotating rings ---
-        for ring_idx in range(3):
+        gcx = size // 2
+        gcy = size // 2
 
-            angle_off = (
-                self._angle
-                + ring_idx * 40
+        pulse = (
+            math.sin(self.pulse)
+            + 1
+        ) * 0.5
+
+        # Large soft glow
+
+        for scale, alpha in [
+            (1.00, 18),
+            (0.86, 25),
+            (0.72, 35),
+            (0.60, 48),
+        ]:
+
+            w = int(
+                90 * scale
+                + pulse * 6
             )
 
-            ring_r = (
-                outer_r
-                - ring_idx * 6
-            )
-
-            ring_a = (
-                200
-                - ring_idx * 50
-            )
-
-            ring_surf = pygame.Surface(
-                (
-                    ring_r*2+4,
-                    ring_r*2+4
-                ),
-                pygame.SRCALPHA
+            h = int(
+                145 * scale
+                + pulse * 8
             )
 
             pygame.draw.ellipse(
-                ring_surf,
-                (*col, ring_a),
+                glow,
                 (
-                    2,
-                    2,
-                    ring_r*2,
-                    ring_r*2
+                    self.color[0],
+                    self.color[1],
+                    self.color[2],
+                    alpha
                 ),
-                3
-            )
-
-            rotated = pygame.transform.rotate(
-                ring_surf,
-                angle_off
-            )
-
-            rw, rh = rotated.get_size()
-
-            surface.blit(
-                rotated,
                 (
-                    cx-rw//2,
-                    cy-rh//2
+                    gcx - w // 2,
+                    gcy - h // 2,
+                    w,
+                    h
                 ),
-                special_flags=pygame.BLEND_RGBA_ADD
+                5
             )
 
-        # --- Outer solid ring frame ---
-        pygame.draw.ellipse(
-            surface,
-            col,
+        surface.blit(
+            glow,
             (
-                cx-outer_r,
-                int(cy-outer_r*0.65),
-                outer_r*2,
-                int(outer_r*1.3)
+                cx - size // 2,
+                cy - size // 2
             ),
-            4
+            special_flags=pygame.BLEND_RGBA_ADD
         )
 
-        # Inner ring
-        pygame.draw.ellipse(
-            surface,
-            (255, 255, 200),
+
+    # ============================================================
+    # DRAW DARK PORTAL CENTER
+    # ============================================================
+
+    def _draw_center(
+        self,
+        surface,
+        cx,
+        cy
+    ):
+
+        layer_size = 150
+
+        layer = pygame.Surface(
             (
-                cx-inner_r,
-                int(cy-inner_r*0.65),
-                inner_r*2,
-                int(inner_r*1.3)
+                layer_size,
+                layer_size
             ),
-            2
+            pygame.SRCALPHA
         )
 
-        # --- Particles ---
-        for p in self._particles:
+        lc = layer_size // 2
 
-            sx = (
+        # Outer energy
+
+        pygame.draw.ellipse(
+            layer,
+            (
+                self.color[0],
+                self.color[1],
+                self.color[2],
+                100
+            ),
+            (
+                lc - 48,
+                lc - 70,
+                96,
+                140
+            )
+        )
+
+        # Dark interior
+
+        pygame.draw.ellipse(
+            layer,
+            (
+                3,
+                2,
+                12,
+                240
+            ),
+            (
+                lc - 39,
+                lc - 61,
+                78,
+                122
+            )
+        )
+
+        # Inner color
+
+        pygame.draw.ellipse(
+            layer,
+            (
+                self.color[0],
+                self.color[1],
+                self.color[2],
+                32
+            ),
+            (
+                lc - 32,
+                lc - 52,
+                64,
+                104
+            )
+        )
+
+        surface.blit(
+            layer,
+            (
+                cx - layer_size // 2,
+                cy - layer_size // 2
+            ),
+            special_flags=pygame.BLEND_RGBA_ADD
+        )
+
+
+    # ============================================================
+    # DRAW MAGICAL RING
+    # ============================================================
+
+    def _draw_ring(
+        self,
+        surface,
+        cx,
+        cy,
+        width,
+        height,
+        angle,
+        alpha,
+        thickness
+    ):
+
+        size = 190
+
+        ring = pygame.Surface(
+            (
+                size,
+                size
+            ),
+            pygame.SRCALPHA
+        )
+
+        rcx = size // 2
+        rcy = size // 2
+
+        # Main ring
+
+        pygame.draw.ellipse(
+            ring,
+            (
+                self.color[0],
+                self.color[1],
+                self.color[2],
+                alpha
+            ),
+            (
+                rcx - width // 2,
+                rcy - height // 2,
+                width,
+                height
+            ),
+            thickness
+        )
+
+        # Bright inner line
+
+        pygame.draw.ellipse(
+            ring,
+            (
+                255,
+                225,
+                150,
+                min(
+                    255,
+                    alpha + 20
+                )
+            ),
+            (
+                rcx - (width - 7) // 2,
+                rcy - (height - 7) // 2,
+                width - 7,
+                height - 7
+            ),
+            1
+        )
+
+        rotated = pygame.transform.rotate(
+            ring,
+            math.degrees(angle)
+        )
+
+        surface.blit(
+            rotated,
+            (
+                cx - rotated.get_width() // 2,
+                cy - rotated.get_height() // 2
+            ),
+            special_flags=pygame.BLEND_RGBA_ADD
+        )
+
+
+    # ============================================================
+    # DRAW MAGIC RUNES
+    # ============================================================
+
+    def _draw_runes(
+        self,
+        surface,
+        cx,
+        cy
+    ):
+
+        rune_surface = pygame.Surface(
+            (
+                190,
+                190
+            ),
+            pygame.SRCALPHA
+        )
+
+        rcx = 95
+        rcy = 95
+
+        # --------------------------------------------------------
+        # Outer rune positions
+        # --------------------------------------------------------
+
+        for i in range(12):
+
+            angle = (
+                math.tau
+                * i
+                / 12
+            ) + self.rotation3
+
+            radius_x = 48
+            radius_y = 68
+
+            x = (
+                rcx
+                + math.cos(angle)
+                * radius_x
+            )
+
+            y = (
+                rcy
+                + math.sin(angle)
+                * radius_y
+            )
+
+            rune_size = 6
+
+            # Diamond
+
+            points = [
+                (
+                    int(x),
+                    int(y - rune_size)
+                ),
+
+                (
+                    int(x + rune_size),
+                    int(y)
+                ),
+
+                (
+                    int(x),
+                    int(y + rune_size)
+                ),
+
+                (
+                    int(x - rune_size),
+                    int(y)
+                )
+            ]
+
+            pygame.draw.polygon(
+                rune_surface,
+                (
+                    255,
+                    225,
+                    150,
+                    210
+                ),
+                points,
+                2
+            )
+
+            # Tiny center
+
+            pygame.draw.circle(
+                rune_surface,
+                (
+                    255,
+                    250,
+                    210,
+                    230
+                ),
+                (
+                    int(x),
+                    int(y)
+                ),
+                2
+            )
+
+        surface.blit(
+            rune_surface,
+            (
+                cx - 95,
+                cy - 95
+            ),
+            special_flags=pygame.BLEND_RGBA_ADD
+        )
+
+
+    # ============================================================
+    # DRAW SWIRLING ENERGY
+    # ============================================================
+
+    def _draw_swirl(
+        self,
+        surface,
+        cx,
+        cy
+    ):
+
+        swirl = pygame.Surface(
+            (
+                130,
+                160
+            ),
+            pygame.SRCALPHA
+        )
+
+        sx = 65
+        sy = 80
+
+        # --------------------------------------------------------
+        # Four independent energy trails
+        # --------------------------------------------------------
+
+        for trail in range(5):
+
+            points = []
+
+            phase = (
+                self.swirl_time
+                + trail * 1.25
+            )
+
+            for i in range(55):
+
+                t = i / 54.0
+
+                angle = (
+                    phase
+                    + t * math.tau * 1.4
+                )
+
+                radius = (
+                    4
+                    + t * 36
+                )
+
+                x = (
+                    sx
+                    + math.cos(angle)
+                    * radius
+                    * 0.75
+                )
+
+                y = (
+                    sy
+                    + math.sin(angle)
+                    * radius
+                    * 1.45
+                )
+
+                points.append(
+                    (
+                        int(x),
+                        int(y)
+                    )
+                )
+
+            if len(points) > 1:
+
+                alpha = (
+                    145
+                    - trail * 20
+                )
+
+                pygame.draw.lines(
+                    swirl,
+                    (
+                        self.color[0],
+                        self.color[1],
+                        self.color[2],
+                        alpha
+                    ),
+                    False,
+                    points,
+                    2
+                )
+
+        surface.blit(
+            swirl,
+            (
+                cx - 65,
+                cy - 80
+            ),
+            special_flags=pygame.BLEND_RGBA_ADD
+        )
+
+
+    # ============================================================
+    # DRAW CENTER CORE
+    # ============================================================
+
+    def _draw_core(
+        self,
+        surface,
+        cx,
+        cy
+    ):
+
+        core = pygame.Surface(
+            (
+                70,
+                90
+            ),
+            pygame.SRCALPHA
+        )
+
+        ccx = 35
+        ccy = 45
+
+        pulse = (
+            1
+            + math.sin(
+                self.pulse * 1.4
+            ) * 0.12
+        )
+
+        w = int(
+            12 * pulse
+        )
+
+        h = int(
+            25 * pulse
+        )
+
+        # Glow
+
+        pygame.draw.ellipse(
+            core,
+            (
+                self.color[0],
+                self.color[1],
+                self.color[2],
+                90
+            ),
+            (
+                ccx - w * 2,
+                ccy - h * 2,
+                w * 4,
+                h * 4
+            )
+        )
+
+        # White-hot center
+
+        pygame.draw.ellipse(
+            core,
+            (
+                255,
+                240,
+                190,
+                220
+            ),
+            (
+                ccx - w,
+                ccy - h,
+                w * 2,
+                h * 2
+            )
+        )
+
+        surface.blit(
+            core,
+            (
+                cx - 35,
+                cy - 45
+            ),
+            special_flags=pygame.BLEND_RGBA_ADD
+        )
+
+
+    # ============================================================
+    # DRAW PARTICLES
+    # ============================================================
+
+    def _draw_particles(
+        self,
+        surface,
+        camera
+    ):
+
+        for p in self.particles:
+
+            x = (
                 int(p[0])
                 - int(camera.offset_x)
             )
 
-            sy = (
+            y = (
                 int(p[1])
                 - int(camera.offset_y)
             )
 
-            alpha = int(
-                255 * (p[4] / p[5])
+            life_ratio = (
+                p[4]
+                / max(
+                    p[5],
+                    0.001
+                )
             )
 
-            ps = pygame.Surface(
-                (6, 6),
+            alpha = int(
+                255
+                * life_ratio
+            )
+
+            size = p[6]
+
+            particle = pygame.Surface(
+                (
+                    14,
+                    14
+                ),
                 pygame.SRCALPHA
             )
 
+            # Soft glow
+
             pygame.draw.circle(
-                ps,
-                (*col, alpha),
-                (3, 3),
-                3
+                particle,
+                (
+                    self.color[0],
+                    self.color[1],
+                    self.color[2],
+                    alpha // 3
+                ),
+                (
+                    7,
+                    7
+                ),
+                6
+            )
+
+            # Bright spark
+
+            pygame.draw.circle(
+                particle,
+                (
+                    255,
+                    240,
+                    190,
+                    alpha
+                ),
+                (
+                    7,
+                    7
+                ),
+                max(
+                    1,
+                    size
+                )
             )
 
             surface.blit(
-                ps,
-                (sx-3, sy-3),
+                particle,
+                (
+                    x - 7,
+                    y - 7
+                ),
                 special_flags=pygame.BLEND_RGBA_ADD
             )
 
-        # --- Label ---
+
+    # ============================================================
+    # MAIN DRAW
+    # ============================================================
+
+    def draw(
+        self,
+        surface,
+        camera,
+        font=None
+    ):
+
+        # --------------------------------------------------------
+        # SCREEN POSITION
+        # --------------------------------------------------------
+
+        cx = (
+            self.rect.centerx
+            - int(camera.offset_x)
+        )
+
+        cy = (
+            self.rect.centery
+            - int(camera.offset_y)
+        )
+
+        # --------------------------------------------------------
+        # ANIMATED SIZE
+        # --------------------------------------------------------
+
+        pulse = math.sin(
+            self.pulse
+        )
+
+        width = int(
+            78
+            + pulse * 2
+        )
+
+        height = int(
+            128
+            + pulse * 4
+        )
+
+        # ========================================================
+        # GLOW
+        # ========================================================
+
+        self._draw_glow(
+            surface,
+            cx,
+            cy
+        )
+
+        # ========================================================
+        # DARK CENTER
+        # ========================================================
+
+        self._draw_center(
+            surface,
+            cx,
+            cy
+        )
+
+        # ========================================================
+        # OUTER RING
+        # ========================================================
+
+        self._draw_ring(
+            surface,
+            cx,
+            cy,
+            width + 12,
+            height + 12,
+            self.rotation,
+            245,
+            4
+        )
+
+        # ========================================================
+        # SECOND RING
+        # ========================================================
+
+        self._draw_ring(
+            surface,
+            cx,
+            cy,
+            width + 2,
+            height + 2,
+            self.rotation2,
+            210,
+            2
+        )
+
+        # ========================================================
+        # THIRD RING
+        # ========================================================
+
+        self._draw_ring(
+            surface,
+            cx,
+            cy,
+            width - 9,
+            height - 10,
+            self.rotation3,
+            180,
+            2
+        )
+
+        # ========================================================
+        # INNER SWIRL
+        # ========================================================
+
+        self._draw_swirl(
+            surface,
+            cx,
+            cy
+        )
+
+        # ========================================================
+        # RUNES
+        # ========================================================
+
+        self._draw_runes(
+            surface,
+            cx,
+            cy
+        )
+
+        # ========================================================
+        # CENTER CORE
+        # ========================================================
+
+        self._draw_core(
+            surface,
+            cx,
+            cy
+        )
+
+        # ========================================================
+        # FOUR ENERGY NODES
+        # ========================================================
+
+        for i in range(4):
+
+            angle = (
+                self.rotation
+                + i * math.pi / 2
+            )
+
+            x = (
+                cx
+                + math.cos(angle)
+                * width
+                * 0.46
+            )
+
+            y = (
+                cy
+                + math.sin(angle)
+                * height
+                * 0.46
+            )
+
+            pygame.draw.circle(
+                surface,
+                (
+                    255,
+                    245,
+                    200
+                ),
+                (
+                    int(x),
+                    int(y)
+                ),
+                4
+            )
+
+            pygame.draw.circle(
+                surface,
+                self.color,
+                (
+                    int(x),
+                    int(y)
+                ),
+                8,
+                2
+            )
+
+        # ========================================================
+        # PARTICLES
+        # ========================================================
+
+        self._draw_particles(
+            surface,
+            camera
+        )
+
+        # ========================================================
+        # LABEL
+        # ========================================================
+
         if self.label and font:
 
-            txt = font.render(
+            text = font.render(
                 self.label,
                 True,
-                (255, 220, 120)
+                (
+                    255,
+                    225,
+                    140
+                )
+            )
+
+            shadow = font.render(
+                self.label,
+                True,
+                (
+                    10,
+                    5,
+                    15
+                )
+            )
+
+            label_y = (
+                cy
+                + height // 2
+                + 10
             )
 
             surface.blit(
-                txt,
+                shadow,
                 (
-                    cx - txt.get_width()//2,
-                    cy + outer_r + 5
+                    cx
+                    - shadow.get_width() // 2
+                    + 2,
+                    label_y + 2
                 )
             )
+
+            surface.blit(
+                text,
+                (
+                    cx
+                    - text.get_width() // 2,
+                    label_y
+                )
+            )
+
+
+    # ============================================================
+    # INTERACTION PROMPT
+    # ============================================================
 
     def draw_interact_prompt(
         self,
@@ -270,36 +1235,90 @@ class Portal:
             - int(camera.offset_y)
         )
 
-        txt = font.render(
-            "[E] ENTER PORTAL",
+        text = "[E] ENTER PORTAL"
+
+        rendered = font.render(
+            text,
             True,
-            (255, 220, 80)
+            (
+                255,
+                225,
+                120
+            )
         )
 
-        bg = pygame.Surface(
+        box_w = (
+            rendered.get_width()
+            + 24
+        )
+
+        box_h = (
+            rendered.get_height()
+            + 12
+        )
+
+        box = pygame.Surface(
             (
-                txt.get_width()+16,
-                txt.get_height()+8
+                box_w,
+                box_h
             ),
             pygame.SRCALPHA
         )
 
-        bg.fill(
-            (0, 0, 0, 150)
+        # Dark transparent background
+
+        box.fill(
+            (
+                5,
+                2,
+                18,
+                190
+            )
+        )
+
+        # Magical border
+
+        pygame.draw.rect(
+            box,
+            (
+                self.color[0],
+                self.color[1],
+                self.color[2],
+                230
+            ),
+            (
+                0,
+                0,
+                box_w,
+                box_h
+            ),
+            2,
+            border_radius=6
+        )
+
+        bx = (
+            cx
+            - box_w // 2
+        )
+
+        by = (
+            cy
+            - 90
         )
 
         surface.blit(
-            bg,
+            box,
             (
-                cx-bg.get_width()//2,
-                cy-80
+                bx,
+                by
             )
         )
 
         surface.blit(
-            txt,
+            rendered,
             (
-                cx-txt.get_width()//2,
-                cy-76
+                cx
+                - rendered.get_width() // 2,
+                by + 6
             )
         )
