@@ -102,40 +102,38 @@ class Player:
             player_folder
         )
 
-        assets_folder = os.path.join(
-            project_folder,
-            "assets",
-            "player"
-        )
+        possible_folders = [
+            os.path.join(project_folder, "assests", "player"),
+            os.path.join(project_folder, "assets", "player"),
+        ]
 
         possible_images = [
-            "mystical_sorcerer_player.jpg",
+            "doctor_strange_player.png",
             "doctor_strange_player_120x145.jpg",
             "doctor_strange_player.jpg",
-            "mystical_sorcerer_player.jpeg",
-            "doctor_strange_player.jpeg",
             "mystical_sorcerer_player.png",
-            "doctor_strange_player.png",
+            "mystical_sorcerer_player.jpg",
+            "doctor_strange_player.jpeg",
+            "mystical_sorcerer_player.jpeg",
         ]
 
         image_path = None
 
-        for filename in possible_images:
-
-            path = os.path.join(
-                assets_folder,
-                filename
-            )
-
-            if os.path.isfile(path):
-
-                image_path = path
-
-                print(
-                    "[PLAYER] Found custom image:",
-                    filename
-                )
-
+        for folder in possible_folders:
+            if not os.path.isdir(folder):
+                continue
+            for filename in possible_images:
+                path = os.path.join(folder, filename)
+                if os.path.isfile(path):
+                    image_path = path
+                    print(
+                        "[PLAYER] Found custom image:",
+                        filename,
+                        "in",
+                        folder
+                    )
+                    break
+            if image_path is not None:
                 break
 
         if image_path is None:
@@ -167,34 +165,29 @@ class Player:
 
         image = image.copy()
 
-        # Remove very light background
-        width = image.get_width()
-        height = image.get_height()
-
-        for px in range(width):
-
-            for py in range(height):
-
-                r, g, b, a = image.get_at(
-                    (px, py)
-                )
-
-                if (
-                    r > 220
-                    and g > 220
-                    and b > 220
-                ):
-
-                    image.set_at(
-                        (px, py),
-                        (r, g, b, 0)
-                    )
-
-        # Keep original visual size
-        image = pygame.transform.smoothscale(
-            image,
-            (120, 145)
+        # If image does not already have an alpha channel with transparency, key out light background
+        has_transparency = any(
+            image.get_at((x, y))[3] < 255
+            for x in (0, image.get_width() - 1)
+            for y in (0, image.get_height() - 1)
         )
+
+        if not has_transparency:
+            width = image.get_width()
+            height = image.get_height()
+
+            for px in range(width):
+                for py in range(height):
+                    r, g, b, a = image.get_at((px, py))
+                    if r > 220 and g > 220 and b > 220:
+                        image.set_at((px, py), (r, g, b, 0))
+
+        # Keep original visual size (120, 145)
+        if image.get_size() != (120, 145):
+            image = pygame.transform.smoothscale(
+                image,
+                (120, 145)
+            )
 
         self.custom_player = image
 

@@ -118,6 +118,52 @@ class BaseLevel(ABC):
     ):
         pass
 
+    def draw_platforms(
+        self,
+        surface: pygame.Surface
+    ):
+        """Default platform drawing for levels that do not override it."""
+        for wall in self.walls:
+            if (
+                wall.width == self.world_w
+                or wall.height == self.world_h
+            ):
+                continue
+
+            screen_rect = pygame.Rect(
+                wall.x - self.camera.offset_x,
+                wall.y - self.camera.offset_y,
+                wall.width,
+                wall.height
+            )
+
+            block_surface = pygame.Surface(
+                (screen_rect.width, screen_rect.height),
+                pygame.SRCALPHA
+            )
+            block_surface.fill((18, 12, 35, 145))
+            surface.blit(block_surface, screen_rect.topleft)
+
+            pygame.draw.rect(
+                surface,
+                (125, 75, 190),
+                screen_rect,
+                2
+            )
+
+            if screen_rect.width > 8 and screen_rect.height > 8:
+                inner_rect = screen_rect.inflate(-6, -6)
+                pygame.draw.rect(surface, (70, 45, 110), inner_rect, 1)
+
+            if screen_rect.width > 20:
+                pygame.draw.line(
+                    surface,
+                    (155, 100, 225),
+                    (screen_rect.left + 5, screen_rect.top + 3),
+                    (screen_rect.right - 5, screen_rect.top + 3),
+                    1
+                )
+
     # =============================================================
     # PORTALS
     # =============================================================
@@ -314,110 +360,9 @@ class BaseLevel(ABC):
             surface
         )
 
-        # ---------------------------------------------------------
-        # VISIBLE COLLISION WALLS
-        # ---------------------------------------------------------
-        #
-        # New visual style:
-        # - dark transparent interior
-        # - thin purple border
-        # - subtle inner highlight
-        #
-        # IMPORTANT:
-        # This changes ONLY appearance.
-        # Collision rectangles remain exactly the same.
-        # ---------------------------------------------------------
-
-        for wall in self.walls:
-
-            # Don't show the outer boundary walls.
-            # Only show actual level/platform blocks.
-
-            if (
-                wall.width == self.world_w
-                or wall.height == self.world_h
-            ):
-                continue
-
-            screen_rect = pygame.Rect(
-                wall.x - self.camera.offset_x,
-                wall.y - self.camera.offset_y,
-                wall.width,
-                wall.height
-            )
-
-            # -----------------------------------------------------
-            # Transparent dark interior
-            # -----------------------------------------------------
-
-            block_surface = pygame.Surface(
-                (
-                    screen_rect.width,
-                    screen_rect.height
-                ),
-                pygame.SRCALPHA
-            )
-
-            block_surface.fill(
-                (18, 12, 35, 145)
-            )
-
-            surface.blit(
-                block_surface,
-                screen_rect.topleft
-            )
-
-            # -----------------------------------------------------
-            # Purple outer border
-            # -----------------------------------------------------
-
-            pygame.draw.rect(
-                surface,
-                (125, 75, 190),
-                screen_rect,
-                2
-            )
-
-            # -----------------------------------------------------
-            # Subtle inner border
-            # -----------------------------------------------------
-
-            if (
-                screen_rect.width > 8
-                and screen_rect.height > 8
-            ):
-
-                inner_rect = screen_rect.inflate(
-                    -6,
-                    -6
-                )
-
-                pygame.draw.rect(
-                    surface,
-                    (70, 45, 110),
-                    inner_rect,
-                    1
-                )
-
-            # -----------------------------------------------------
-            # Small top highlight
-            # -----------------------------------------------------
-
-            if screen_rect.width > 20:
-
-                pygame.draw.line(
-                    surface,
-                    (155, 100, 225),
-                    (
-                        screen_rect.left + 5,
-                        screen_rect.top + 3
-                    ),
-                    (
-                        screen_rect.right - 5,
-                        screen_rect.top + 3
-                    ),
-                    1
-                )
+        self.draw_platforms(
+            surface
+        )
 
         # ---------------------------------------------------------
         # PORTALS

@@ -25,12 +25,8 @@ class EnvironmentEffects:
     def _spawn(self, camera_x, camera_y):
         sw, sh = 1280, 720
         stage = self.stage
-        if stage == 1:   # city smog / sparks
-            for _ in range(2):
-                self._new(random.randint(int(camera_x), int(camera_x)+sw),
-                          random.randint(int(camera_y), int(camera_y)+sh),
-                          random.uniform(-0.3, 0.3), random.uniform(-0.5, -0.1),
-                          random.uniform(1.5, 3.0), (180,180,180), random.randint(2,5))
+        if stage == 1:   # Stage 1: New York City (clean night air, snow removed)
+            pass
         elif stage == 2:  # space dust
             for _ in range(2):
                 self._new(random.randint(int(camera_x), int(camera_x)+sw),

@@ -4,8 +4,49 @@
 
 import pygame
 import math
+import os
 
 from effects.particles import ParticleSystem
+
+# ============================================================
+# CUSTOM ENEMY SPRITES CACHE
+# ============================================================
+
+_CUSTOM_ENEMY_SPRITES = {}
+
+def load_custom_enemy_sprite(kind: str) -> pygame.Surface | None:
+    """Load transparent custom warrior sprite for the enemy archetype."""
+    if kind not in _CUSTOM_ENEMY_SPRITES:
+        enemy_dir = os.path.dirname(os.path.abspath(__file__))
+        project_dir = os.path.dirname(enemy_dir)
+        possible_folders = [
+            os.path.join(project_dir, "assests", "enemies"),
+            os.path.join(project_dir, "assets", "enemies"),
+        ]
+        filenames = [
+            f"alien_{kind}.png",
+            f"{kind}_warrior.png",
+            f"{kind}.png",
+        ]
+        sprite = None
+        for folder in possible_folders:
+            if not os.path.isdir(folder):
+                continue
+            for fname in filenames:
+                path = os.path.join(folder, fname)
+                if os.path.isfile(path):
+                    try:
+                        img = pygame.image.load(path)
+                        if pygame.display.get_surface():
+                            img = img.convert_alpha()
+                        sprite = img
+                        break
+                    except Exception as err:
+                        print(f"[ENEMY] Error loading {path}: {err}")
+            if sprite is not None:
+                break
+        _CUSTOM_ENEMY_SPRITES[kind] = sprite
+    return _CUSTOM_ENEMY_SPRITES.get(kind)
 
 
 # ============================================================
@@ -321,6 +362,10 @@ class Enemy:
             (52, 64)
         )
 
+        # Custom high-quality warrior sprite
+        self.custom_sprite = load_custom_enemy_sprite(kind)
+        self._facing = "right"
+
         self._state = "idle"
 
         self._frame = 0.0
@@ -535,6 +580,11 @@ class Enemy:
 
         if self.vel.length() > 0:
 
+            if self.vel.x < -1:
+                self._facing = "left"
+            elif self.vel.x > 1:
+                self._facing = "right"
+
             self.rect.x += int(
                 self.vel.x * dt
             )
@@ -624,50 +674,113 @@ class Enemy:
             self.rect
         )
 
-        animation = self._anims[
-            self._state
-        ]
-
-        frame_idx = min(
-            int(self._frame),
-            len(animation) - 1
-        )
-
-        sprite = animation[
-            frame_idx
-        ]
+        draw_top = r.top
 
         # ====================================================
-        # DAMAGE FLASH
+        # CUSTOM ENEMY SPRITE RENDERING
         # ====================================================
 
-        if self._flash > 0:
+        if self.custom_sprite is not None:
 
-            flash = pygame.Surface(
-                sprite.get_size(),
-                pygame.SRCALPHA
-            )
+            sprite = self.custom_sprite
 
-            flash.fill(
-                (
-                    255,
-                    255,
-                    255,
-                    180
+            # Facing direction flip
+            if self._facing == "left":
+                sprite = pygame.transform.flip(
+                    sprite,
+                    True,
+                    False
                 )
+
+            draw_w, draw_h = sprite.get_size()
+            draw_x = r.centerx - draw_w // 2
+            # Bottom align with ground collision rect so feet touch platform
+            draw_y = r.bottom - draw_h
+            draw_top = draw_y
+
+            # Subtle walk bounce
+            if self._state == "walk":
+                bob = int(math.sin(self._frame * 1.6) * 3)
+                draw_y += bob
+
+            # Damage flash
+            if self._flash > 0:
+                flash = pygame.Surface(
+                    sprite.get_size(),
+                    pygame.SRCALPHA
+                )
+                flash.fill(
+                    (255, 255, 255, 180)
+                )
+                sprite = sprite.copy()
+                sprite.blit(
+                    flash,
+                    (0, 0),
+                    special_flags=pygame.BLEND_RGBA_ADD
+                )
+
+            # Death fade
+            if not self.alive:
+                sprite = sprite.copy()
+                alpha_factor = max(
+                    0.0,
+                    1.0 - (self._death_timer / 0.6)
+                )
+                sprite.set_alpha(
+                    int(255 * alpha_factor)
+                )
+
+            surface.blit(
+                sprite,
+                (draw_x, draw_y)
             )
 
-            sprite = sprite.copy()
+        # ====================================================
+        # PROCEDURAL SPRITE FALLBACK
+        # ====================================================
 
-            sprite.blit(
-                flash,
-                (0, 0)
+        else:
+
+            animation = self._anims[
+                self._state
+            ]
+
+            frame_idx = min(
+                int(self._frame),
+                len(animation) - 1
             )
 
-        surface.blit(
-            sprite,
-            r.topleft
-        )
+            sprite = animation[
+                frame_idx
+            ]
+
+            if self._flash > 0:
+
+                flash = pygame.Surface(
+                    sprite.get_size(),
+                    pygame.SRCALPHA
+                )
+
+                flash.fill(
+                    (
+                        255,
+                        255,
+                        255,
+                        180
+                    )
+                )
+
+                sprite = sprite.copy()
+
+                sprite.blit(
+                    flash,
+                    (0, 0)
+                )
+
+            surface.blit(
+                sprite,
+                r.topleft
+            )
 
         # ====================================================
         # HEALTH BAR
@@ -683,9 +796,9 @@ class Enemy:
                 - bar_width // 2
             )
 
-            bar_y = (
-                r.top
-                - 10
+            bar_y = min(
+                r.top - 10,
+                draw_top - 8
             )
 
             pygame.draw.rect(

@@ -195,3 +195,63 @@ class Stage1NewYork(BaseLevel):
             self.bg_image,
             (0, 0)
         )
+
+    # ---------------------------------------------------------------
+    # NYC ROOFTOP PLATFORMS (Architectural Visuals)
+    # ---------------------------------------------------------------
+
+    def draw_platforms(
+        self,
+        surface: pygame.Surface
+    ):
+        """Draw realistic New York rooftop terrace stone/metallic platforms."""
+        for wall in self.walls:
+            if (
+                wall.width == self.world_w
+                or wall.height == self.world_h
+            ):
+                continue
+
+            r = pygame.Rect(
+                wall.x - self.camera.offset_x,
+                wall.y - self.camera.offset_y,
+                wall.width,
+                wall.height
+            )
+
+            # 1. Main dark architectural slab (semi-translucent dark slate/granite)
+            slab = pygame.Surface((r.width, r.height), pygame.SRCALPHA)
+            slab.fill((22, 20, 32, 235))
+
+            # 2. Polished top walking stone cap (thickness 8px)
+            cap_h = min(8, r.height)
+            pygame.draw.rect(slab, (40, 44, 58, 255), (0, 0, r.width, cap_h))
+
+            # Top crisp highlight rim (city light reflection)
+            pygame.draw.line(slab, (95, 105, 130, 220), (0, 0), (r.width - 1, 0), 1)
+
+            # Subtle warm city amber reflection line under the rim
+            if cap_h > 2:
+                pygame.draw.line(slab, (120, 100, 75, 120), (1, 1), (r.width - 2, 1), 1)
+
+            # 3. Soft Sanctum / tech blue accent line along the ledge lip
+            if cap_h >= 6:
+                pygame.draw.line(slab, (35, 85, 160, 180), (2, cap_h - 1), (r.width - 3, cap_h - 1), 2)
+
+            # 4. Vertical architectural panel seams and rivets
+            seam_spacing = 70
+            for sx in range(seam_spacing, r.width - 20, seam_spacing):
+                pygame.draw.line(slab, (14, 12, 20, 200), (sx, cap_h), (sx, r.height - 2), 1)
+                pygame.draw.line(slab, (50, 48, 65, 120), (sx + 1, cap_h), (sx + 1, r.height - 2), 1)
+                # Small architectural bolt/bracket
+                if r.height > 18:
+                    pygame.draw.circle(slab, (60, 65, 80), (sx, cap_h + 6), 2)
+
+            # 5. Side corner metal brackets
+            pygame.draw.rect(slab, (35, 38, 50), (0, 0, 4, r.height))
+            pygame.draw.rect(slab, (35, 38, 50), (r.width - 4, 0, 4, r.height))
+
+            # 6. Bottom drop shadow
+            pygame.draw.line(slab, (10, 8, 16, 255), (0, r.height - 1), (r.width - 1, r.height - 1), 2)
+
+            surface.blit(slab, r.topleft)
